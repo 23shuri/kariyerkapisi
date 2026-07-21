@@ -1,6 +1,6 @@
 # Aİ KARİYER KAPISI
 
-
+yakala çet
 Kullanıcıların hesap oluşturup CV girdiği, şirketlerin ise pozisyon/kadro bilgisi ile aradıkları yetkinlikleri girdiği, bir yapay zeka motorunun bu iki tarafı **uygunluk oranına (match score)** göre eşleştirdiği bir platform.
 
 ---
