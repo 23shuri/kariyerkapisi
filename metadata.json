@@ -1,0 +1,6 @@
+{
+  "name": "Kariyer Kapısı",
+  "description": "Yapay zeka destekli akıllı eşleştirme ve kariyer platformu.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

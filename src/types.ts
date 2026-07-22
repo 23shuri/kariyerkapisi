@@ -1,25 +1,18 @@
-export interface MatchDetail {
-  matchPercentage: number;
-  technicalSkillsMatch: number;
-  experienceMatch: number;
-  culturalMatch: number;
-  strengths: string[];
-  improvements: string[];
-  experienceExplanation: string;
-  culturalExplanation: string;
-}
+export type Role = 'candidate' | 'employer';
 
-export interface Candidate {
+export interface User {
   id: string;
-  name: string;
-  role: string;
-  experienceYears: number;
-  location: string;
-  avatarUrl: string;
-  skills: string[];
-  tags: string[];
-  bio: string;
-  matchDetails?: Record<string, MatchDetail>; // Key is jobId
+  email: string;
+  fullName: string;
+  role: Role;
+  title?: string;
+  location?: string;
+  experienceYears?: number;
+  skills?: string[];
+  resumeText?: string;
+  resumeFileName?: string;
+  profileStrength?: number;
+  avatarUrl?: string;
 }
 
 export interface Job {
@@ -27,25 +20,36 @@ export interface Job {
   title: string;
   company: string;
   location: string;
-  type: string; // 'Tam Zamanlı' | 'Yarı Zamanlı' | 'Proje Bazlı'
-  workModel: string; // 'Hibrit' | 'Uzaktan' | 'Ofisten'
-  salaryText: string; // 'Rekabetçi' | '50,000 - 70,000 TL' vb.
-  matchPercentage?: number; // Calculated dynamic or preset
-  description: string;
+  type: 'Uzaktan' | 'Hibrit' | 'Ofisten';
   skills: string[];
-  tags: string[];
+  experienceLevel: string;
+  description: string;
+  salaryRange: string;
   postedAt: string;
-  applicationsCount: number;
-  aiMatchCount: number;
-  logoUrl?: string;
-  logoLetter?: string;
+  applicationCount: number;
+  candidateMatchesCount: number;
+}
+
+export interface MatchDetail {
+  jobId: string;
+  candidateId: string;
+  matchScore: number;
+  strongPoints: string[];
+  developmentAreas: string[];
+  skillAlignment: number; // 0-100
+  experienceAlignment: number; // 0-100
+  culturalAlignment: number; // 0-100
+  description: string;
 }
 
 export interface Application {
   id: string;
   jobId: string;
   candidateId: string;
+  candidateName: string;
+  candidateTitle: string;
+  candidateAvatarUrl?: string;
+  status: 'Yeni' | 'Mülakat' | 'Reddedildi' | 'Kabul Edildi';
+  matchScore: number;
   appliedAt: string;
-  matchPercentage: number;
-  status: 'Yayında' | 'Değerlendirmede' | 'Görüşme Ayarlandı' | 'Reddedildi' | 'Kabul Edildi';
 }
