@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Hero } from './components/Hero';
-import { Testimonials } from './components/Testimonials';
 import { AuthModal } from './components/AuthModal';
 import { CandidateDashboard } from './components/CandidateDashboard';
 import { EmployerDashboard } from './components/EmployerDashboard';
@@ -72,9 +71,6 @@ export default function App() {
           <div className="space-y-0">
             {/* Landing Hero */}
             <Hero onOpenAuth={handleOpenAuth} />
-            
-            {/* Dynamic Testimonials */}
-            <Testimonials />
 
             {/* Platform Stats / Future Proof Info Box */}
             <section className="bg-white py-16 sm:py-20 border-t border-slate-200">

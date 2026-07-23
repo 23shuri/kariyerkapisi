@@ -19,6 +19,7 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
   // Profile Editor / Parser States
   const [isParsing, setIsParsing] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [saveProfileMessage, setSaveProfileMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [skillsText, setSkillsText] = useState(currentUser.skills?.join(', ') || '');
   const [fullName, setFullName] = useState(currentUser.fullName);
   const [title, setTitle] = useState(currentUser.title || '');
@@ -34,16 +35,28 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [isLoadingMatch, setIsLoadingMatch] = useState(false);
 
+  // Safe JSON parser — returns null if body is empty or not JSON
+  const safeJson = async (res: Response) => {
+    const text = await res.text();
+    if (!text || text.trim() === '') return null;
+    try {
+      return JSON.parse(text);
+    } catch {
+      console.error('JSON parse error, raw response:', text.slice(0, 200));
+      return null;
+    }
+  };
+
   // Fetch Jobs & Applications
   const fetchData = async () => {
     try {
       const jobsRes = await fetch('/api/jobs');
-      const jobsData = await jobsRes.json();
-      setJobs(jobsData.jobs || []);
+      const jobsData = await safeJson(jobsRes);
+      setJobs(jobsData?.jobs || []);
 
       const appsRes = await fetch(`/api/applications?userId=${currentUser.id}&role=candidate`);
-      const appsData = await appsRes.json();
-      setApplications(appsData.applications || []);
+      const appsData = await safeJson(appsRes);
+      setApplications(appsData?.applications || []);
     } catch (err) {
       console.error('Data fetching error:', err);
     }
@@ -74,8 +87,8 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
           })
         });
 
-        const resData = await response.json();
-        if (response.ok && resData.success) {
+        const resData = await safeJson(response);
+        if (response.ok && resData?.success) {
           const parsed = resData.data;
           
           // Save updated profile
@@ -94,8 +107,8 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
             })
           });
 
-          const profileData = await profileRes.json();
-          if (profileRes.ok) {
+          const profileData = await safeJson(profileRes);
+          if (profileRes.ok && profileData) {
             onProfileUpdated(profileData.user);
             setFullName(profileData.user.fullName);
             setTitle(profileData.user.title || '');
@@ -140,6 +153,7 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingProfile(true);
+    setSaveProfileMessage(null);
 
     const skillsArray = skillsText.split(',').map(s => s.trim()).filter(s => s.length > 0);
 
@@ -158,14 +172,19 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
         })
       });
 
-      const data = await response.json();
-      if (response.ok) {
+      const data = await safeJson(response);
+      if (response.ok && data) {
         onProfileUpdated(data.user);
+        setSaveProfileMessage({ type: 'success', text: 'Profil başarıyla güncellendi.' });
+      } else {
+        setSaveProfileMessage({ type: 'error', text: data?.error || 'Profil güncellenemedi.' });
       }
     } catch (err) {
       console.error('Profile save error:', err);
+      setSaveProfileMessage({ type: 'error', text: 'Sunucu hatası oluştu.' });
     } finally {
       setIsSavingProfile(false);
+      setTimeout(() => setSaveProfileMessage(null), 3000);
     }
   };
 
@@ -186,15 +205,14 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
         })
       });
 
-      const data = await response.json();
-      if (response.ok) {
+      const data = await safeJson(response);
+      if (response.ok && data) {
         setActiveMatch(data.match);
-        fetchData(); // reload applications
+        fetchData();
       } else {
-        // If already applied, fetch match detail
         const matchRes = await fetch(`/api/matches/${job.id}/${currentUser.id}`);
-        const matchData = await matchRes.json();
-        setActiveMatch(matchData.match || null);
+        const matchData = await safeJson(matchRes);
+        setActiveMatch(matchData?.match || null);
       }
     } catch (err) {
       console.error('Application failed:', err);
@@ -213,8 +231,8 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
 
     try {
       const matchRes = await fetch(`/api/matches/${job.id}/${currentUser.id}`);
-      const matchData = await matchRes.json();
-      setActiveMatch(matchData.match || null);
+      const matchData = await safeJson(matchRes);
+      setActiveMatch(matchData?.match || null);
     } catch (err) {
       console.error('Failed to get match detail:', err);
     } finally {
@@ -385,6 +403,11 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
               >
                 {isSavingProfile ? 'Kaydediliyor...' : 'Profili Güncelle'}
               </button>
+              {saveProfileMessage && (
+                <p className={`text-xs text-center font-medium mt-1 ${saveProfileMessage.type === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
+                  {saveProfileMessage.text}
+                </p>
+              )}
             </form>
           </div>
         </div>

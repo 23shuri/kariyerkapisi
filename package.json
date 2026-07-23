@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 3000 --host",
-    "dev:backend": "python3 app.py",
+    "dev:server": "tsx server.ts",
+    "dev:all": "tsx server.ts",
     "build": "vite build",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"

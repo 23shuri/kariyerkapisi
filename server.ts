@@ -153,23 +153,43 @@ app.get('/api/applications', (req, res) => {
 
 // Helper for deterministic local math score in case API key is missing
 function calculateHeuristicMatch(cvText: string, jobDesc: string, jobSkills: string[]): MatchDetail {
-  const textToAnalyze = `${cvText.toLowerCase()} ${jobDesc.toLowerCase()}`;
+  const cvLower = cvText.toLowerCase();
+  const jobLower = jobDesc.toLowerCase();
   
-  // Calculate skill matches
+  // Calculate skill matches — only from CV text vs job skills
   let matchedSkills: string[] = [];
   if (jobSkills.length > 0) {
-    matchedSkills = jobSkills.filter(skill => textToAnalyze.includes(skill.toLowerCase()));
+    matchedSkills = jobSkills.filter(skill => cvLower.includes(skill.toLowerCase()));
   }
 
-  const totalSkills = jobSkills.length || 5;
+  const totalSkills = jobSkills.length || 1;
   const skillRatio = matchedSkills.length / totalSkills;
-  
-  // Base scores
-  const skillAlignment = Math.min(100, Math.round(40 + (skillRatio * 60)));
-  const experienceAlignment = textToAnalyze.includes('senior') || textToAnalyze.includes('kıdemli') ? 85 : 75;
-  const culturalAlignment = 80;
 
-  const matchScore = Math.round((skillAlignment * 0.5) + (experienceAlignment * 0.3) + (culturalAlignment * 0.2));
+  // Skill alignment: purely based on ratio (0 match = 0, full match = 100)
+  const skillAlignment = Math.round(skillRatio * 100);
+
+  // Experience alignment: check CV text for experience indicators
+  let experienceAlignment = 0;
+  if (cvLower.includes('senior') || cvLower.includes('kıdemli') || cvLower.includes('lead') || cvLower.includes('müdür')) {
+    experienceAlignment = 80;
+  } else if (cvLower.includes('junior') || cvLower.includes('staj') || cvLower.includes('intern')) {
+    experienceAlignment = 30;
+  } else if (cvLower.length > 200) {
+    // Has some content, moderate score
+    experienceAlignment = 50;
+  } else {
+    // Very short/empty CV
+    experienceAlignment = 10;
+  }
+
+  // Cultural alignment: based on keyword overlap between CV and job description
+  const jobWords = jobLower.split(/\s+/).filter(w => w.length > 4);
+  const matchedJobWords = jobWords.filter(w => cvLower.includes(w));
+  const culturalRatio = jobWords.length > 0 ? matchedJobWords.length / jobWords.length : 0;
+  const culturalAlignment = Math.round(culturalRatio * 100);
+
+  // Weighted final score
+  const matchScore = Math.round((skillAlignment * 0.6) + (experienceAlignment * 0.3) + (culturalAlignment * 0.1));
 
   // Turkish templates
   const strongPoints = [

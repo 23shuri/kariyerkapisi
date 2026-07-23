@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Sparkles, LogIn, UserPlus, Mail, Lock, User as UserIcon, Building } from 'lucide-react';
+import { X, LogIn, UserPlus, Mail, Lock, User as UserIcon, Building } from 'lucide-react';
 import { Role, User } from '../types';
 
 interface AuthModalProps {
@@ -16,20 +16,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialRole, onClose, onSu
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  const fillDemoCreds = (demoType: 'cand' | 'empl') => {
-    if (demoType === 'cand') {
-      setEmail('ayse@yilmaz.com');
-      setPassword('123456');
-      setRole('candidate');
-    } else {
-      setEmail('hr@techcorp.com');
-      setPassword('123456');
-      setRole('employer');
-    }
-    setIsLogin(true);
-    setError('');
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +34,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialRole, onClose, onSu
         body: JSON.stringify(payload),
       });
 
-      const result = await response.json();
+      const text = await response.text();
+      if (!text || text.trim() === '') {
+        throw new Error('Sunucudan boş yanıt geldi. Lütfen tekrar deneyin.');
+      }
+
+      let result: any;
+      try {
+        result = JSON.parse(text);
+      } catch {
+        throw new Error('Sunucu yanıtı işlenemedi. Lütfen tekrar deneyin.');
+      }
+
       if (!response.ok) {
         throw new Error(result.error || 'İşlem gerçekleştirilemedi.');
       }
@@ -88,32 +85,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialRole, onClose, onSu
             <p className="text-xs text-slate-500 mt-1">
               {role === 'candidate' ? 'İş Arayan & Aday Girişi' : 'İş Veren & Şirket Girişi'}
             </p>
-          </div>
-
-          {/* Quick Demo Accout buttons */}
-          <div className="mb-6 rounded-2xl bg-slate-50 p-4 border border-slate-100">
-            <p className="text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1">
-              <Sparkles className="h-3.5 w-3.5 text-emerald-500" />
-              Demo Hesaplarla Hızlı Başla:
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => fillDemoCreds('cand')}
-                className="flex items-center justify-center gap-1 bg-white hover:bg-slate-50 border border-slate-150 text-xs font-medium py-2 px-3 rounded-lg text-slate-700 transition"
-              >
-                <UserIcon className="h-3.5 w-3.5 text-emerald-500" />
-                Aday Girişi
-              </button>
-              <button
-                type="button"
-                onClick={() => fillDemoCreds('empl')}
-                className="flex items-center justify-center gap-1 bg-white hover:bg-slate-50 border border-slate-150 text-xs font-medium py-2 px-3 rounded-lg text-slate-700 transition"
-              >
-                <Building className="h-3.5 w-3.5 text-emerald-500" />
-                Şirket Girişi
-              </button>
-            </div>
           </div>
 
           {/* Role selector tab (Only on register) */}
