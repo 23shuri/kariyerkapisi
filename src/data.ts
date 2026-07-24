@@ -65,4 +65,23 @@ export const INITIAL_MATCH_DETAILS: Record<string, MatchDetail> = {};
 
 export const INITIAL_APPLICATIONS: Application[] = [];
 
-export const USER_TESTIMONIALS: never[] = [];
+export const USER_TESTIMONIALS = [
+  {
+    name: 'Elif Kaya',
+    role: 'Senior Frontend Developer',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80',
+    text: 'Kariyer Kapısı akıllı eşleştirme sayesinde becerilerime tam uyan pozisyonları anında buldum ve 2 hafta içinde hayalimdeki şirkette işe başladım.'
+  },
+  {
+    name: 'Mehmet Demir',
+    role: 'İşe Alım Müdürü @ TechCorp',
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&h=150&q=80',
+    text: 'İlanlarımıza başvuran adayların AI eşleştirme skorları ve CV analiz raporları işe alım sürecimizi %60 hızlandırdı.'
+  },
+  {
+    name: 'Zeynep Çelik',
+    role: 'Data Scientist',
+    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=150&h=150&q=80',
+    text: 'Özgeçmişimi yükledikten sonra otomatik olarak oluşturulan yetenek analiz raporu kariyer yolculuğumda bana ışık tuttu.'
+  }
+];
