@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FileText, Sparkles, MapPin, Award, User, Upload, Search, Briefcase, 
-  ChevronRight, BadgeAlert, BadgeCheck, CheckCircle2, RefreshCw, Star, Info, CirclePercent, ArrowUpRight
+  ChevronRight, BadgeAlert, BadgeCheck, CheckCircle2, RefreshCw, Star, Info, CirclePercent, ArrowUpRight,
+  Building2, Clock, Layers, DollarSign, Users
 } from 'lucide-react';
 import { User as UserType, Job, Application, MatchDetail } from '../types';
 
@@ -34,6 +35,10 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
   const [isApplying, setIsApplying] = useState(false);
   const [showMatchModal, setShowMatchModal] = useState(false);
   const [isLoadingMatch, setIsLoadingMatch] = useState(false);
+
+  // Company detail modal
+  const [showCompanyModal, setShowCompanyModal] = useState(false);
+  const [companyJob, setCompanyJob] = useState<Job | null>(null);
 
   // Safe JSON parser — returns null if body is empty or not JSON
   const safeJson = async (res: Response) => {
@@ -528,16 +533,22 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                         <div>
                           <div className="flex items-center gap-2 mb-1.5">
-                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50/50 px-1.5 py-0.5 rounded">
+                            <button
+                              onClick={() => { setCompanyJob(job); setShowCompanyModal(true); }}
+                              className="text-[10px] font-bold text-emerald-600 bg-emerald-50/50 hover:bg-emerald-100 px-1.5 py-0.5 rounded transition cursor-pointer underline-offset-2 hover:underline"
+                            >
                               {job.company}
-                            </span>
+                            </button>
                             <span className="text-[10px] font-semibold text-slate-400 flex items-center gap-1">
                               <MapPin className="h-3 w-3" />
                               {job.location}
                             </span>
                           </div>
                           
-                          <h4 className="text-sm font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">
+                          <h4
+                            onClick={() => { setCompanyJob(job); setShowCompanyModal(true); }}
+                            className="text-sm font-bold text-slate-900 group-hover:text-emerald-600 transition-colors cursor-pointer hover:underline underline-offset-2"
+                          >
                             {job.title}
                           </h4>
                           
@@ -590,6 +601,146 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
         </div>
 
       </div>
+
+      {/* COMPANY DETAIL MODAL */}
+      {showCompanyModal && companyJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowCompanyModal(false)} />
+
+          <div className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-slate-900/5 max-h-[90vh] flex flex-col">
+
+            {/* Header */}
+            <div className="p-6 border-b border-slate-100 bg-gradient-to-br from-emerald-50 to-white">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600 text-white font-black text-xl shadow-md">
+                    {companyJob.company.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 className="font-display text-lg font-extrabold text-slate-900 leading-tight">
+                      {companyJob.company}
+                    </h3>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full mt-1">
+                      <MapPin className="h-3 w-3" />
+                      {companyJob.location}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCompanyModal(false)}
+                  className="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full p-1.5 transition shrink-0"
+                >
+                  Kapat
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-5">
+
+              {/* Aranan Pozisyon */}
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                  <Briefcase className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Aranan Pozisyon</p>
+                  <p className="text-sm font-bold text-slate-900">{companyJob.title}</p>
+                </div>
+              </div>
+
+              {/* Çalışma Şekli */}
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <Building2 className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Çalışma Şekli</p>
+                  <p className="text-sm font-semibold text-slate-900">{companyJob.type}</p>
+                </div>
+              </div>
+
+              {/* Deneyim */}
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                  <Clock className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Aranan Deneyim</p>
+                  <p className="text-sm font-semibold text-slate-900">{companyJob.experienceLevel}</p>
+                </div>
+              </div>
+
+              {/* Maaş */}
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-green-50 text-green-600">
+                  <DollarSign className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Maaş Aralığı</p>
+                  <p className="text-sm font-semibold text-slate-900">{companyJob.salaryRange}</p>
+                </div>
+              </div>
+
+              {/* Başvuru sayısı */}
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
+                  <Users className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Başvuru Sayısı</p>
+                  <p className="text-sm font-semibold text-slate-900">{companyJob.applicationCount} başvuru · {companyJob.candidateMatchesCount} yüksek eşleşme</p>
+                </div>
+              </div>
+
+              {/* İlan Tarihi */}
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-500">
+                  <Clock className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">İlan Tarihi</p>
+                  <p className="text-sm font-semibold text-slate-900">{companyJob.postedAt}</p>
+                </div>
+              </div>
+
+              {/* Aranan Beceriler */}
+              {companyJob.skills.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Aranan Beceriler</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {companyJob.skills.map((skill, idx) => (
+                      <span key={idx} className="inline-flex items-center rounded-lg bg-emerald-50 border border-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Pozisyon Açıklaması */}
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Pozisyon Hakkında</p>
+                <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 rounded-xl p-3.5 border border-slate-100">
+                  {companyJob.description}
+                </p>
+              </div>
+
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-end">
+              <button
+                onClick={() => setShowCompanyModal(false)}
+                className="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs py-2 px-5 rounded-xl transition"
+              >
+                Kapat
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* MATCH REPORT DIALOG MODAL */}
       {showMatchModal && selectedJob && (
