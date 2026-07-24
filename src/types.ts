@@ -53,3 +53,15 @@ export interface Application {
   matchScore: number;
   appliedAt: string;
 }
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+  isRead: boolean;
+  createdAt: string;
+  relatedJobId?: string;
+  relatedCompany?: string;
+}

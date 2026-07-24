@@ -165,6 +165,32 @@ class MatchDetailModel(db.Model):
             'description': self.description or ''
         }
 
+class NotificationModel(db.Model):
+    __tablename__ = 'notifications'
+
+    id = db.Column(db.String(64), primary_key=True)
+    user_id = db.Column(db.String(64), nullable=False)
+    title = db.Column(db.String(256), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    type = db.Column(db.String(32), default='info') # 'success', 'error', 'info', 'warning'
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.String(64), nullable=False)
+    related_job_id = db.Column(db.String(64), nullable=True)
+    related_company = db.Column(db.String(120), nullable=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'userId': self.user_id,
+            'title': self.title,
+            'message': self.message,
+            'type': self.type,
+            'isRead': self.is_read,
+            'createdAt': self.created_at,
+            'relatedJobId': self.related_job_id,
+            'relatedCompany': self.related_company
+        }
+
 # --- Gemini Client Helper ---
 def get_gemini_client():
     api_key = os.getenv('GEMINI_API_KEY')
@@ -433,8 +459,22 @@ def get_applications():
         return jsonify({'error': 'Kullanıcı kimliği gereklidir.'}), 400
 
     if role == 'employer':
-        apps = ApplicationModel.query.all()
+        # Return only applications for jobs posted by this employer's company
+        # Find all jobs by this employer
+        user = UserModel.query.get(user_id)
+        if not user:
+            return jsonify({'applications': []})
+        
+        company_name = user.full_name.replace(' İK', '').strip()
+        employer_jobs = JobModel.query.filter_by(company=company_name).all()
+        employer_job_ids = [j.id for j in employer_jobs]
+        
+        if not employer_job_ids:
+            return jsonify({'applications': []})
+        
+        apps = ApplicationModel.query.filter(ApplicationModel.job_id.in_(employer_job_ids)).all()
     else:
+        # Return applications submitted by this candidate
         apps = ApplicationModel.query.filter_by(candidate_id=user_id).all()
 
     return jsonify({'applications': [a.to_dict() for a in apps]})
@@ -808,6 +848,115 @@ def get_employer_stats():
         'totalApplications': total_apps,
         'highMatches': high_matches,
         'inInterview': in_interview
+    })
+
+# 13. Notifications: Get
+@app.route('/api/notifications', methods=['GET'])
+def get_notifications():
+    user_id = request.args.get('userId')
+    if not user_id:
+        return jsonify({'error': 'Kullanıcı kimliği gereklidir.'}), 400
+
+    notifications = NotificationModel.query.filter_by(user_id=user_id).order_by(NotificationModel.created_at.desc()).all()
+    unread_count = NotificationModel.query.filter_by(user_id=user_id, is_read=False).count()
+
+    return jsonify({
+        'notifications': [n.to_dict() for n in notifications],
+        'unreadCount': unread_count
+    })
+
+# 14. Notifications: Mark as Read
+@app.route('/api/notifications/<notification_id>/read', methods=['PATCH'])
+def mark_notification_read(notification_id):
+    notification = NotificationModel.query.get(notification_id)
+    if not notification:
+        return jsonify({'error': 'Bildirim bulunamadı.'}), 404
+
+    notification.is_read = True
+    db.session.commit()
+    return jsonify({'success': True})
+
+# 15. Notifications: Mark All as Read
+@app.route('/api/notifications/read-all', methods=['POST'])
+def mark_all_notifications_read():
+    user_id = request.get_json().get('userId')
+    if not user_id:
+        return jsonify({'error': 'Kullanıcı kimliği gereklidir.'}), 400
+
+    NotificationModel.query.filter_by(user_id=user_id, is_read=False).update({'is_read': True})
+    db.session.commit()
+    return jsonify({'success': True})
+
+# 16. User Details (for employer to see candidate details)
+@app.route('/api/user/<user_id>', methods=['GET'])
+def get_user_details(user_id):
+    user = UserModel.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'Kullanıcı bulunamadı.'}), 404
+    
+    return jsonify({
+        'user': user.to_dict(),
+        'cv': {
+            'hasResume': bool(user.resume_text),
+            'resumeLength': len(user.resume_text) if user.resume_text else 0,
+            'skillsCount': len(json.loads(user.skills_json) if user.skills_json else []),
+            'experienceYears': user.experience_years,
+            'location': user.location or '',
+            'title': user.title or '',
+            'profileStrength': user.profile_strength
+        }
+    })
+
+# 17. Application: Accept/Reject (Employer)
+@app.route('/api/applications/<app_id>/decision', methods=['PATCH'])
+def application_decision(app_id):
+    data = request.get_json() or {}
+    decision = data.get('decision')  # 'accept' or 'reject'
+
+    if decision not in ['accept', 'reject']:
+        return jsonify({'error': 'Geçersiz karar. "accept" veya "reject" olmalı.'}), 400
+
+    app_obj = ApplicationModel.query.get(app_id)
+    if not app_obj:
+        return jsonify({'error': 'Başvuru bulunamadı.'}), 404
+
+    # Get job details
+    job = JobModel.query.get(app_obj.job_id)
+    if not job:
+        return jsonify({'error': 'İlan bulunamadı.'}), 404
+
+    # Update application status
+    if decision == 'accept':
+        app_obj.status = 'Kabul Edildi'
+        notification_title = '🎉 Tebrikler! Başvurunuz Kabul Edildi'
+        notification_message = f"Tebrikler! İşe başlamak için hazırsınız. Başvurunuz {job.company} tarafından onaylandı. En kısa sürede işe başlama sürecinizle ilgili sizinle iletişime geçilecektir. Yeni işinizde başarılar dileriz!"
+        notification_type = 'success'
+    else:
+        app_obj.status = 'Reddedildi'
+        notification_title = 'Başvuru Sonucu'
+        notification_message = f"Üzgünüz, {job.company} başvurunuzu bu pozisyon için uygun görmedi. İlginiz için teşekkür eder, diğer iş ilanlarında başarılar dileriz."
+        notification_type = 'error'
+
+    db.session.commit()
+
+    # Create notification for candidate
+    notification = NotificationModel(
+        id=f"notif_{int(time.time() * 1000)}",
+        user_id=app_obj.candidate_id,
+        title=notification_title,
+        message=notification_message,
+        type=notification_type,
+        is_read=False,
+        created_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        related_job_id=job.id,
+        related_company=job.company
+    )
+    db.session.add(notification)
+    db.session.commit()
+
+    return jsonify({
+        'application': app_obj.to_dict(),
+        'notification': notification.to_dict()
     })
 
 if __name__ == '__main__':

@@ -1,14 +1,16 @@
-import React from 'react';
-import { Briefcase, LogOut, User as UserIcon, Building, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Briefcase, LogOut, User as UserIcon, Building, Sparkles, Bell } from 'lucide-react';
 import { User } from '../types';
 
 interface HeaderProps {
   currentUser: User | null;
   onLogout: () => void;
   onOpenAuth: (role: 'candidate' | 'employer') => void;
+  onOpenNotifications?: () => void;
+  unreadCount?: number;
 }
 
-export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onOpenAuth }) => {
+export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onOpenAuth, onOpenNotifications, unreadCount = 0 }) => {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -61,6 +63,20 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onOpenAut
                   {currentUser.fullName.charAt(0).toUpperCase()}
                 </div>
               )}
+
+              {/* Notification Bell */}
+              <button
+                onClick={onOpenNotifications}
+                className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-emerald-600 transition-all duration-150"
+                title="Bildirimler"
+              >
+                <Bell className="h-4 w-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
 
               <button
                 onClick={onLogout}

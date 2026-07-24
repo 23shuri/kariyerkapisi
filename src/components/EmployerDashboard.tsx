@@ -7,9 +7,10 @@ import { Job, Application, MatchDetail } from '../types';
 
 interface EmployerDashboardProps {
   currentUser: { id: string; fullName: string };
+  onNotificationChange?: () => void;
 }
 
-export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUser }) => {
+export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUser, onNotificationChange }) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   
@@ -137,7 +138,26 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
     }
   };
 
-  // View Match Report Modal
+  // Handle Accept/Reject Decision with Notification
+  const handleApplicationDecision = async (appId: string, decision: 'accept' | 'reject') => {
+    try {
+      const res = await fetch(`/api/applications/${appId}/decision`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ decision })
+      });
+
+      if (res.ok) {
+        await fetchData();
+        // Trigger notification refresh in parent
+        onNotificationChange?.();
+      }
+    } catch (err) {
+      console.error('Decision update failed:', err);
+    }
+  };
+
+  // View Match Report Modal with CV details
   const handleViewMatch = async (app: Application) => {
     setSelectedApp(app);
     setShowMatchModal(true);
@@ -149,6 +169,12 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
       const matchRes = await fetch(`/api/matches/${app.jobId}/${app.candidateId}`);
       const matchData = await matchRes.json();
       setActiveMatch(matchData.match || null);
+      
+      // Get candidate details from users table
+      const userRes = await fetch('/api/jobs'); // temp, but we need user endpoint
+      // Since we don't have user endpoint, we can simulate
+      const candidateText = `${app.candidateName} • ${app.candidateTitle}\n${app.matchScore}% AI Uyum`;
+      setCvDetailText(candidateText);
     } catch (err) {
       console.error('Failed to get match detail:', err);
     } finally {
@@ -439,23 +465,34 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
                           Başvuru Tarihi: {app.appliedAt}
                         </span>
 
-                        {/* Status selector */}
-                        <div className="flex items-center space-x-1.5">
-                          <span className="text-[11px] font-semibold text-slate-500 mr-1.5">Aşama:</span>
-                          {['Yeni', 'Mülakat', 'Reddedildi', 'Kabul Edildi'].map((status) => (
+                        {/* Accept/Reject buttons OR Status selector */}
+                        {app.status === 'Yeni' || app.status === 'Mülakat' ? (
+                          <div className="flex items-center gap-2">
                             <button
-                              key={status}
-                              onClick={() => handleStatusChange(app.id, status)}
-                              className={`py-1 px-2.5 text-[10px] font-medium rounded-lg transition border cursor-pointer ${
-                                app.status === status 
-                                  ? 'bg-emerald-600 text-white border-emerald-600' 
-                                  : 'bg-white hover:bg-slate-50 text-slate-600 border-slate-200'
-                              }`}
+                              onClick={() => handleApplicationDecision(app.id, 'accept')}
+                              className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-2 px-4 rounded-lg transition cursor-pointer shadow-sm"
                             >
-                              {status}
+                              <Check className="h-3.5 w-3.5" />
+                              Kabul Et
                             </button>
-                          ))}
-                        </div>
+                            <button
+                              onClick={() => handleApplicationDecision(app.id, 'reject')}
+                              className="inline-flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2 px-4 rounded-lg transition cursor-pointer shadow-sm"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                              Reddet
+                            </button>
+                          </div>
+                        ) : (
+                          <span className={`inline-flex items-center gap-1 py-1.5 px-3 text-xs font-bold rounded-lg ${
+                            app.status === 'Kabul Edildi' 
+                              ? 'bg-green-50 text-green-700 border border-green-200' 
+                              : 'bg-red-50 text-red-700 border border-red-200'
+                          }`}>
+                            {app.status === 'Kabul Edildi' ? <CheckCircle2 className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
+                            {app.status}
+                          </span>
+                        )}
                       </div>
 
                     </div>

@@ -4,12 +4,16 @@ import { Hero } from './components/Hero';
 import { AuthModal } from './components/AuthModal';
 import { CandidateDashboard } from './components/CandidateDashboard';
 import { EmployerDashboard } from './components/EmployerDashboard';
-import { User, Role } from './types';
+import { NotificationPanel } from './components/NotificationPanel';
+import { User, Role, Notification } from './types';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authRole, setAuthRole] = useState<Role>('candidate');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Load user session on startup
   useEffect(() => {
@@ -23,6 +27,59 @@ export default function App() {
       }
     }
   }, []);
+
+  // Fetch notifications when user changes
+  useEffect(() => {
+    if (currentUser) {
+      fetchNotifications();
+      // Poll every 30 seconds
+      const interval = setInterval(fetchNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [currentUser]);
+
+  const fetchNotifications = async () => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch(`/api/notifications?userId=${currentUser.id}`);
+      const data = await res.json();
+      if (res.ok) {
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount || 0);
+      }
+    } catch (err) {
+      console.error('Notification fetch error:', err);
+    }
+  };
+
+  const handleMarkAsRead = async (notificationId: string) => {
+    try {
+      const res = await fetch(`/api/notifications/${notificationId}/read`, {
+        method: 'PATCH'
+      });
+      if (res.ok) {
+        fetchNotifications();
+      }
+    } catch (err) {
+      console.error('Mark as read error:', err);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch('/api/notifications/read-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser.id })
+      });
+      if (res.ok) {
+        fetchNotifications();
+      }
+    } catch (err) {
+      console.error('Mark all as read error:', err);
+    }
+  };
 
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
@@ -51,7 +108,9 @@ export default function App() {
       <Header 
         currentUser={currentUser} 
         onLogout={handleLogout} 
-        onOpenAuth={handleOpenAuth} 
+        onOpenAuth={handleOpenAuth}
+        onOpenNotifications={() => setShowNotifications(!showNotifications)}
+        unreadCount={unreadCount}
       />
 
       {/* Main Content Area */}
@@ -64,7 +123,8 @@ export default function App() {
             />
           ) : (
             <EmployerDashboard 
-              currentUser={currentUser} 
+              currentUser={currentUser}
+              onNotificationChange={fetchNotifications}
             />
           )
         ) : (
@@ -122,6 +182,15 @@ export default function App() {
           onSuccess={handleLoginSuccess} 
         />
       )}
+
+      {/* Notification Panel */}
+      <NotificationPanel
+        isOpen={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        notifications={notifications}
+        onMarkAsRead={handleMarkAsRead}
+        onMarkAllAsRead={handleMarkAllAsRead}
+      />
     </div>
   );
 }
