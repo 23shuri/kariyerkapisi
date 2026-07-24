@@ -6,3 +6,5 @@ flask-bcrypt>=1.0.1
 pyjwt>=2.8.0
 python-dotenv>=1.0.0
 google-genai>=0.1.1
+pymupdf>=1.24.0
+docx2txt>=0.8

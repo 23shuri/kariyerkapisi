@@ -54,29 +54,38 @@ app.use('/uploads', express.static(path.resolve(uploadDir)));
 
 // 1. Auth Endpoint: Login
 app.post('/api/auth/login', (req, res) => {
+  console.log('[Login] Request received:', req.body);
   const { email, password } = req.body;
+  
   if (!email || !password) {
+    console.log('[Login] Missing credentials');
     return res.status(400).json({ error: 'E-posta ve şifre gereklidir.' });
   }
 
   // Basic mock check: password should be at least 4 chars
   const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
   if (!user) {
+    console.log('[Login] User not found:', email);
     return res.status(401).json({ error: 'Kullanıcı bulunamadı. Lütfen kayıt olun.' });
   }
 
+  console.log('[Login] Success for user:', user.email);
   return res.json({ user });
 });
 
 // 2. Auth Endpoint: Register
 app.post('/api/auth/register', (req, res) => {
+  console.log('[Register] Request received:', req.body);
   const { email, fullName, role, password } = req.body;
+  
   if (!email || !fullName || !role || !password) {
+    console.log('[Register] Missing fields');
     return res.status(400).json({ error: 'Tüm alanlar zorunludur.' });
   }
 
   const existing = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
   if (existing) {
+    console.log('[Register] Email already in use:', email);
     return res.status(400).json({ error: 'Bu e-posta adresi zaten kullanımda.' });
   }
 
@@ -90,6 +99,7 @@ app.post('/api/auth/register', (req, res) => {
   };
 
   users.push(newUser);
+  console.log('[Register] New user created:', newUser.id);
   return res.status(201).json({ user: newUser });
 });
 

@@ -70,11 +70,21 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
   const handleFileUpload = async (file: File) => {
     setIsParsing(true);
     
-    // Read file as text if text/pdf/docx (We simulate PDF parse beautifully with base64/text)
     const reader = new FileReader();
     reader.onload = async (e) => {
       const textContent = e.target?.result as string;
-      const base64Content = textContent.split(',')[1] || textContent;
+
+      // For PDF/DOC files: send base64, for .txt files: send raw text
+      let fileBase64: string | undefined;
+      let customText: string | undefined;
+
+      if (file.type === 'text/plain') {
+        // .txt dosyası: düz metin olarak oku
+        customText = textContent;
+      } else {
+        // PDF / DOC / DOCX: base64 olarak gönder
+        fileBase64 = textContent.split(',')[1] || textContent;
+      }
 
       try {
         const response = await fetch('/api/parse-cv', {
@@ -82,8 +92,8 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             fileName: file.name,
-            fileBase64: base64Content,
-            customText: `Aday: ${file.name.replace(/\.[^/.]+$/, "")}\nSkills: React, Node.js, TypeScript, GraphQL, CSS, HTML, Tailwind.\nDeneyim: 5 yıl.\nKonum: İstanbul.\nRol: Kıdemli Geliştirici.`
+            fileBase64,
+            customText
           })
         });
 
@@ -91,12 +101,12 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
         if (response.ok && resData?.success) {
           const parsed = resData.data;
           
-          // Save updated profile
+          // Save updated profile — fullName intentionally excluded,
+          // so uploading a CV never overwrites the user's registered name.
           const profileRes = await fetch(`/api/profile/${currentUser.id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              fullName: parsed.fullName,
               title: parsed.title,
               experienceYears: parsed.experienceYears,
               skills: parsed.skills,
@@ -110,7 +120,7 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
           const profileData = await safeJson(profileRes);
           if (profileRes.ok && profileData) {
             onProfileUpdated(profileData.user);
-            setFullName(profileData.user.fullName);
+            // fullName state'ini değiştirme — kullanıcının kendi adı korunur
             setTitle(profileData.user.title || '');
             setExperienceYears(profileData.user.experienceYears || 1);
             setLocation(profileData.user.location || '');
@@ -125,7 +135,11 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
       }
     };
 
-    reader.readAsDataURL(file);
+    if (file.type === 'text/plain') {
+      reader.readAsText(file, 'UTF-8');
+    } else {
+      reader.readAsDataURL(file);
+    }
   };
 
   // Drag and drop handlers

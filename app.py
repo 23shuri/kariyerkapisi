@@ -469,25 +469,41 @@ def submit_application():
     if ai_client:
         try:
             prompt = f"""
-            Aday Özgeçmiş Metni: {cv_text}
-            İş İlanı: {job.title} ({job.company}) - {job.description}
-            Beceriler: {', '.join(job_skills)}
-            Lütfen JSON formatında Türkçe analiz üret:
-            {{
-                "matchScore": 85,
-                "strongPoints": ["Teknik deneyim uygun"],
-                "developmentAreas": ["Ek sertifika önerilir"],
-                "skillAlignment": 90,
-                "experienceAlignment": 80,
-                "culturalAlignment": 85,
-                "description": "Genel analiz özeti"
-            }}
-            """
+Aşağıda bir adayın özgeçmiş metni ve bir iş ilanı var.
+SADECE özgeçmiş metninde açıkça yazılı olan bilgileri kullan.
+Özgeçmişte yazmayan hiçbir şeyi tahmin etme veya uydurma.
+
+ÖZGEÇMIŞ:
+{cv_text[:3000]}
+
+İŞ İLANI:
+Pozisyon: {job.title} | Şirket: {job.company}
+Açıklama: {job.description}
+Aranan Beceriler: {', '.join(job_skills)}
+
+Lütfen YALNIZCA özgeçmiş metninde gerçekten geçen bilgilere dayanarak JSON üret:
+{{
+    "matchScore": <0-100 arası sayı>,
+    "strongPoints": ["Özgeçmişte gerçekten olan güçlü yön 1", "güçlü yön 2"],
+    "developmentAreas": ["Özgeçmişte eksik olan veya geliştirilmesi gereken alan"],
+    "skillAlignment": <0-100>,
+    "experienceAlignment": <0-100>,
+    "culturalAlignment": <0-100>,
+    "description": "Özgeçmiş içeriğine dayalı kısa Türkçe değerlendirme"
+}}
+Sadece JSON döndür, başka metin yazma.
+"""
             response = ai_client.models.generate_content(
                 model='gemini-2.5-flash',
                 contents=prompt
             )
-            parsed = json.loads(response.text.strip())
+            import re as _re
+            raw = response.text.strip()
+            json_match = _re.search(r'\{[\s\S]*\}', raw)
+            if json_match:
+                parsed = json.loads(json_match.group())
+            else:
+                parsed = json.loads(raw)
             match_data = parsed
         except Exception as e:
             print(f"[AI Error] {e}")
@@ -595,23 +611,158 @@ def update_application_status(app_id):
 def parse_cv():
     data = request.get_json() or {}
     file_name = data.get('fileName', 'ozgecmis.pdf')
+    file_base64 = data.get('fileBase64', '')
     custom_text = data.get('customText', '')
 
-    text_lower = (custom_text or file_name).lower()
-    skills_map = ['react', 'node', 'typescript', 'python', 'javascript', 'sql', 'css', 'html', 'vue', 'angular', 'aws', 'docker', 'graphql']
-    detected_skills = [s.upper() for s in skills_map if s in text_lower]
+    # --- PDF metin çıkarma (PyMuPDF veya pdfminer ile) ---
+    extracted_text = custom_text or ''
+
+    if file_base64 and not custom_text:
+        try:
+            import base64, io
+            raw_bytes = base64.b64decode(file_base64)
+            
+            if file_name.lower().endswith('.pdf'):
+                try:
+                    import fitz  # PyMuPDF
+                    doc = fitz.open(stream=raw_bytes, filetype='pdf')
+                    pages_text = []
+                    for page in doc:
+                        pages_text.append(page.get_text())
+                    extracted_text = '\n'.join(pages_text).strip()
+                    print(f"[CV Parser] PyMuPDF extracted {len(extracted_text)} chars from PDF.")
+                except ImportError:
+                    try:
+                        from pdfminer.high_level import extract_text_to_fp
+                        from pdfminer.layout import LAParams
+                        output = io.StringIO()
+                        extract_text_to_fp(io.BytesIO(raw_bytes), output, laparams=LAParams())
+                        extracted_text = output.getvalue().strip()
+                        print(f"[CV Parser] pdfminer extracted {len(extracted_text)} chars from PDF.")
+                    except ImportError:
+                        print("[CV Parser] No PDF library available. Using filename heuristic.")
+                        extracted_text = f"Dosya: {file_name}"
+            elif file_name.lower().endswith(('.doc', '.docx')):
+                try:
+                    import docx2txt
+                    extracted_text = docx2txt.process(io.BytesIO(raw_bytes)).strip()
+                    print(f"[CV Parser] docx2txt extracted {len(extracted_text)} chars.")
+                except ImportError:
+                    print("[CV Parser] docx2txt not available.")
+                    extracted_text = f"Dosya: {file_name}"
+        except Exception as e:
+            print(f"[CV Parser] File decode error: {e}")
+            extracted_text = f"Dosya: {file_name}"
+
+    if not extracted_text or len(extracted_text.strip()) < 10:
+        extracted_text = f"Dosya adı: {file_name}"
+
+    # --- Gemini ile analiz ---
+    ai_client = get_gemini_client()
+
+    if ai_client:
+        try:
+            prompt = f"""Aşağıdaki özgeçmiş içeriğini analiz et ve adayın bilgilerini çıkar.
+Yalnızca özgeçmiş içeriğinde açıkça geçen bilgileri kullan. Tahmin etme, uydurmama.
+Cevabı mutlaka aşağıdaki JSON formatında Türkçe ver:
+
+{{
+  "fullName": "Adın tam hali (yoksa boş bırak)",
+  "title": "Pozisyon/unvan (özgeçmişte ne yazıyorsa)",
+  "experienceYears": 0,
+  "skills": ["yalnızca özgeçmiş metninde geçen teknik beceriler"],
+  "location": "Şehir adı (yoksa boş bırak)"
+}}
+
+Özgeçmiş İçeriği:
+{extracted_text[:4000]}
+"""
+            response = ai_client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=prompt
+            )
+            raw = response.text.strip()
+            # JSON bloğunu ayıkla
+            import re
+            json_match = re.search(r'\{[\s\S]*\}', raw)
+            if json_match:
+                parsed = json.loads(json_match.group())
+            else:
+                parsed = json.loads(raw)
+
+            return jsonify({
+                'success': True,
+                'data': {
+                    'fullName': parsed.get('fullName') or 'Yeni Aday',
+                    'title': parsed.get('title') or 'Yazılım Uzmanı',
+                    'experienceYears': int(parsed.get('experienceYears') or 0),
+                    'skills': parsed.get('skills') or [],
+                    'location': parsed.get('location') or '',
+                    'resumeFileName': file_name,
+                    'resumeText': extracted_text,
+                    'profileStrength': 85
+                }
+            })
+        except Exception as e:
+            print(f"[CV Parser AI Error] {e}")
+
+    # --- Gemini yoksa: gelişmiş keyword analizi ---
+    text_lower = extracted_text.lower()
+    skills_map = [
+        'react', 'vue', 'angular', 'next.js', 'nuxt',
+        'node.js', 'express', 'django', 'flask', 'spring',
+        'typescript', 'javascript', 'python', 'java', 'c#', 'c++', 'go', 'rust', 'php', 'swift', 'kotlin',
+        'sql', 'postgresql', 'mysql', 'mongodb', 'redis',
+        'docker', 'kubernetes', 'aws', 'gcp', 'azure',
+        'graphql', 'rest', 'html', 'css', 'tailwind',
+        'git', 'linux', 'figma', 'jira', 'scrum', 'agile',
+        'machine learning', 'tensorflow', 'pytorch', 'pandas', 'numpy', 'tableau'
+    ]
+    detected_skills = [s for s in skills_map if s in text_lower]
+
+    # Deneyim yılı çıkarma
+    years = 0
+    import re
+    year_match = re.search(r'(\d+)\s*[\+]?\s*(yıl|yil|year|yr)', text_lower)
+    if year_match:
+        years = int(year_match.group(1))
+
+    # İsim çıkarma (ilk satır genellikle ad-soyad olur)
+    lines = [l.strip() for l in extracted_text.split('\n') if l.strip()]
+    detected_name = 'Yeni Aday'
+    for line in lines[:5]:
+        # Kısa, başlık olmayan, harf içeren satırı isim say
+        if 3 < len(line) < 40 and re.match(r'^[A-Za-zÀ-ÖØ-öø-ÿÇçĞğİıÖöŞşÜü\s]+$', line):
+            detected_name = line
+            break
+
+    # Unvan çıkarma
+    title_keywords = {
+        'frontend': 'Frontend Developer', 'front-end': 'Frontend Developer',
+        'backend': 'Backend Developer', 'back-end': 'Backend Developer',
+        'full stack': 'Full Stack Developer', 'fullstack': 'Full Stack Developer',
+        'data scientist': 'Data Scientist', 'data analyst': 'Data Analyst',
+        'devops': 'DevOps Engineer', 'mobile': 'Mobile Developer',
+        'android': 'Android Developer', 'ios': 'iOS Developer',
+        'yazılım': 'Yazılım Geliştirici', 'software': 'Software Engineer'
+    }
+    detected_title = 'Yazılım Uzmanı'
+    for kw, title_val in title_keywords.items():
+        if kw in text_lower:
+            detected_title = title_val
+            break
 
     return jsonify({
         'success': True,
         'data': {
-            'fullName': custom_text.split('\n')[0].strip() if len(custom_text) > 3 else 'Yeni Aday',
-            'title': 'Frontend Geliştirici' if 'react' in text_lower else 'Yazılım Mühendisi',
-            'experienceYears': 3,
-            'skills': detected_skills if detected_skills else ['React', 'JavaScript', 'Python'],
-            'location': 'İstanbul',
+            'fullName': detected_name,
+            'title': detected_title,
+            'experienceYears': years,
+            'skills': [s.title() for s in detected_skills] if detected_skills else [],
+            'location': '',
             'resumeFileName': file_name,
-            'resumeText': custom_text or f"Dosya: {file_name}",
-            'profileStrength': 85
+            'resumeText': extracted_text,
+            'profileStrength': 80 if detected_skills else 40
         }
     })
 
