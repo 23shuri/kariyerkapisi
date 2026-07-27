@@ -9,9 +9,10 @@ import { User as UserType, Job, Application, MatchDetail } from '../types';
 interface CandidateDashboardProps {
   currentUser: UserType;
   onProfileUpdated: (user: UserType) => void;
+  activeTab: 'home' | 'applications';
 }
 
-export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentUser, onProfileUpdated }) => {
+export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentUser, onProfileUpdated, activeTab }) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -275,7 +276,9 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 text-slate-800">
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+      {activeTab === 'home' ? (
+        /* ANA EKRAN - Jobs Feed */
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
         
         {/* LEFT COLUMN: Candidate Profile & CV Parser */}
         <div className="lg:col-span-4 space-y-6">
@@ -320,7 +323,7 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
             </div>
 
             {/* Profile Strength */}
-            <div className="mb-6 rounded-2xl bg-emerald-50/40 p-4 border border-emerald-100/30">
+            <div className="mb-4 rounded-2xl bg-emerald-50/40 p-4 border border-emerald-100/30">
               <div className="flex items-center justify-between text-xs font-semibold text-emerald-950 mb-1.5">
                 <span className="flex items-center gap-1">
                   <Sparkles className="h-3.5 w-3.5 text-emerald-600 animate-spin" />
@@ -340,166 +343,12 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
                   : 'Yapay zeka eşleştirme oranını yükseltmek için CV yükleyin.'}
               </p>
             </div>
-
-            {/* CV Parser File Drop */}
-            <div 
-              onDragEnter={handleDrag}
-              onDragOver={handleDrag}
-              onDragLeave={handleDrag}
-              onDrop={handleDrop}
-              className={`relative border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${dragActive ? 'border-emerald-600 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300 bg-slate-50/30'}`}
-            >
-              <input 
-                type="file" 
-                id="cv-file-input" 
-                className="hidden" 
-                accept=".pdf,.doc,.docx,.txt"
-                onChange={(e) => e.target.files && e.target.files[0] && handleFileUpload(e.target.files[0])}
-              />
-              <label htmlFor="cv-file-input" className="cursor-pointer">
-                {isParsing ? (
-                  <div className="flex flex-col items-center py-3">
-                    <RefreshCw className="h-7 w-7 text-emerald-600 animate-spin mb-3" />
-                    <span className="text-xs font-semibold text-slate-900">Özgeçmiş Analiz Ediliyor...</span>
-                    <span className="text-[10px] text-slate-400 mt-1">Gemini LLM yetenekleri çıkartıyor</span>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white border border-slate-100 shadow-sm text-slate-500 mb-3">
-                      <Upload className="h-4 w-4 text-slate-400" />
-                    </div>
-                    <span className="text-xs font-bold text-slate-900">Yeni CV Yükle (PDF, Word)</span>
-                    <span className="text-[10px] text-slate-400 mt-1">Sürükle bırak veya tıkla</span>
-                  </div>
-                )}
-              </label>
-            </div>
-          </div>
-
-          {/* Quick Profile Editor */}
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-            <h4 className="font-display text-sm font-bold text-slate-900 mb-4 flex items-center gap-1.5">
-              <Award className="h-4 w-4 text-emerald-500" />
-              Profil Bilgileri
-            </h4>
-            <form onSubmit={handleSaveProfile} className="space-y-4">
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-500 mb-1">Ad Soyad</label>
-                <input 
-                  type="text" 
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs outline-none focus:border-emerald-500 transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-500 mb-1">Unvan</label>
-                <input 
-                  type="text" 
-                  value={title}
-                  placeholder="Örn: Frontend Developer"
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs outline-none focus:border-emerald-500 transition-all"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">Deneyim (Yıl)</label>
-                  <input 
-                    type="number" 
-                    value={experienceYears}
-                    onChange={(e) => setExperienceYears(Number(e.target.value))}
-                    className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs outline-none focus:border-emerald-500 transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-500 mb-1">Konum</label>
-                  <input 
-                    type="text" 
-                    value={location}
-                    placeholder="İstanbul"
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs outline-none focus:border-emerald-500 transition-all"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-500 mb-1">Yetenekler (Virgülle Ayırın)</label>
-                <input 
-                  type="text" 
-                  value={skillsText}
-                  placeholder="React, TypeScript, Node.js"
-                  onChange={(e) => setSkillsText(e.target.value)}
-                  className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs outline-none focus:border-emerald-500 transition-all"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSavingProfile}
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium py-2 rounded-lg transition cursor-pointer"
-              >
-                {isSavingProfile ? 'Kaydediliyor...' : 'Profili Güncelle'}
-              </button>
-              {saveProfileMessage && (
-                <p className={`text-xs text-center font-medium mt-1 ${saveProfileMessage.type === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
-                  {saveProfileMessage.text}
-                </p>
-              )}
-            </form>
           </div>
         </div>
 
         {/* RIGHT COLUMN: Jobs feed & Application statuses */}
         <div className="lg:col-span-8 space-y-6">
           
-          {/* Dashboard Application History banner */}
-          {applications.length > 0 && (
-            <div className="rounded-3xl border border-emerald-100/50 bg-emerald-50/20 p-6">
-              <h4 className="font-display text-sm font-bold text-emerald-950 mb-3 flex items-center gap-1.5">
-                <CheckCircle2 className="h-4.5 w-4.5 text-emerald-600" />
-                Mevcut Başvurularınız ({applications.length})
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {applications.map((app) => {
-                  const matchingJob = jobs.find(j => j.id === app.jobId);
-                  return (
-                    <div key={app.id} className="bg-white rounded-2xl border border-emerald-100/30 p-4 flex items-center justify-between shadow-sm">
-                      <div>
-                        <p className="text-xs font-bold text-slate-900">{matchingJob?.title || 'Pozisyon'}</p>
-                        <p className="text-[10px] text-slate-400 font-medium">{matchingJob?.company || 'Şirket'}</p>
-                        <div className="flex items-center gap-1.5 mt-2">
-                          <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-bold ring-1 ring-inset ${
-                            app.status === 'Yeni' ? 'bg-amber-50 text-amber-700 ring-amber-600/10' :
-                            app.status === 'Mülakat' ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/10' :
-                            app.status === 'Kabul Edildi' ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/10' :
-                            'bg-slate-50 text-slate-600 ring-slate-500/10'
-                          }`}>
-                            {app.status}
-                          </span>
-                          <span className="text-[10px] font-medium text-slate-400">
-                            {app.appliedAt}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <button
-                        onClick={() => matchingJob && viewMatchReport(matchingJob)}
-                        className="flex flex-col items-center justify-center py-1.5 px-2.5 rounded-xl bg-emerald-50/60 hover:bg-emerald-50 text-emerald-700 transition cursor-pointer"
-                      >
-                        <span className="text-[8px] font-bold uppercase tracking-wider">Eşleşme</span>
-                        <span className="text-sm font-bold font-mono">%{app.matchScore}</span>
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           {/* Job Feed header search */}
           <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -623,6 +472,88 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
         </div>
 
       </div>
+  ) : (
+    /* MEVCUT BAŞVURULAR TAB */
+    <div className="max-w-5xl mx-auto">
+      <div className="mb-6">
+        <h2 className="font-display text-2xl font-bold text-slate-900">Mevcut Başvurularım</h2>
+        <p className="text-sm text-slate-500 mt-1">Tüm başvurularınızı ve durumlarını bu sayfada görebilirsiniz.</p>
+      </div>
+
+      {applications.length === 0 ? (
+        <div className="text-center py-20 border border-dashed border-slate-200 rounded-3xl bg-slate-50/30">
+          <Briefcase className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+          <p className="text-base font-bold text-slate-900">Henüz başvuru yapmadınız</p>
+          <p className="text-sm text-slate-400 mt-2">Ana ekrandan iş ilanlarına göz atın ve başvurmaya başlayın.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {applications.map((app) => {
+            const matchingJob = jobs.find(j => j.id === app.jobId);
+            return (
+              <div key={app.id} className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm hover:shadow-md transition">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-lg font-bold text-slate-900">{matchingJob?.title || 'Pozisyon'}</h3>
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ring-1 ring-inset ${
+                        app.status === 'Yeni' ? 'bg-amber-50 text-amber-700 ring-amber-600/10' :
+                        app.status === 'Mülakat' ? 'bg-blue-50 text-blue-700 ring-blue-600/10' :
+                        app.status === 'Kabul Edildi' ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/10' :
+                        app.status === 'Reddedildi' ? 'bg-red-50 text-red-700 ring-red-600/10' :
+                        'bg-slate-50 text-slate-600 ring-slate-500/10'
+                      }`}>
+                        {app.status}
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-600 flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-slate-400" />
+                      {matchingJob?.company || 'Şirket'}
+                    </p>
+                    <p className="text-sm text-slate-500 flex items-center gap-2 mt-1">
+                      <MapPin className="h-4 w-4 text-slate-400" />
+                      {matchingJob?.location || 'Konum belirtilmemiş'}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-2">
+                      Başvuru tarihi: {app.appliedAt}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-3">
+                    <div className="flex flex-col items-center justify-center py-3 px-4 rounded-xl bg-emerald-50 border border-emerald-100">
+                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">Eşleşme</span>
+                      <span className="text-2xl font-bold font-mono text-emerald-900">%{app.matchScore}</span>
+                    </div>
+                    <button
+                      onClick={() => matchingJob && viewMatchReport(matchingJob)}
+                      className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Uyum Raporu
+                    </button>
+                  </div>
+                </div>
+
+                {/* Skills */}
+                {matchingJob && matchingJob.skills.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                    <p className="text-xs font-semibold text-slate-500 mb-2">Aranan Yetenekler:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {matchingJob.skills.map((skill, idx) => (
+                        <span key={idx} className="inline-flex items-center rounded bg-slate-50 border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  )}
 
       {/* COMPANY DETAIL MODAL */}
       {showCompanyModal && companyJob && (
@@ -847,7 +778,7 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowProfileEditModal(false)} />
           
-          <div className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl max-h-[90vh] flex flex-col">
+          <div className="relative w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl max-h-[90vh] flex flex-col">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-white">
               <h3 className="font-display text-lg font-bold text-slate-900">Profil Düzenle</h3>
               <button onClick={() => setShowProfileEditModal(false)} className="text-slate-400 hover:text-slate-600 rounded-full p-1.5 transition">
@@ -855,7 +786,101 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
               </button>
             </div>
             
-            <form onSubmit={handleSaveProfile} className="p-6 overflow-y-auto flex-1 space-y-4">
+            <form onSubmit={handleSaveProfile} className="p-6 overflow-y-auto flex-1 space-y-5">
+              
+              {/* Avatar Upload Section */}
+              <div className="bg-gradient-to-br from-emerald-50/50 to-white rounded-2xl p-5 border border-emerald-100">
+                <label className="block text-xs font-bold text-slate-700 mb-3">Profil Fotoğrafı</label>
+                <div className="flex items-center gap-4">
+                  {currentUser.avatarUrl ? (
+                    <img src={currentUser.avatarUrl} alt={currentUser.fullName} className="h-20 w-20 rounded-2xl object-cover ring-2 ring-emerald-100" referrerPolicy="no-referrer" />
+                  ) : (
+                    <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 font-bold text-2xl ring-2 ring-emerald-100">
+                      {currentUser.fullName.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <input 
+                      type="file" 
+                      id="avatar-upload" 
+                      className="hidden" 
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          const reader = new FileReader();
+                          reader.onload = async (ev) => {
+                            const base64 = ev.target?.result as string;
+                            try {
+                              const res = await fetch(`/api/profile/${currentUser.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ avatarUrl: base64 })
+                              });
+                              const data = await res.json();
+                              if (res.ok && data.user) {
+                                onProfileUpdated(data.user);
+                                setSaveProfileMessage({ type: 'success', text: 'Fotoğraf yüklendi!' });
+                                setTimeout(() => setSaveProfileMessage(null), 2000);
+                              }
+                            } catch (err) {
+                              console.error('Avatar upload error:', err);
+                            }
+                          };
+                          reader.readAsDataURL(e.target.files[0]);
+                        }
+                      }}
+                    />
+                    <label htmlFor="avatar-upload" className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2 px-4 rounded-lg cursor-pointer transition">
+                      <Upload className="h-4 w-4" />
+                      Fotoğraf Yükle
+                    </label>
+                    <p className="text-xs text-slate-500 mt-2">JPG, PNG veya GIF formatında, max 2MB</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* CV Upload Section */}
+              <div className="bg-gradient-to-br from-blue-50/50 to-white rounded-2xl p-5 border border-blue-100">
+                <label className="block text-xs font-bold text-slate-700 mb-3">Özgeçmiş (CV) Yükle ve Analiz Et</label>
+                <div 
+                  onDragEnter={handleDrag}
+                  onDragOver={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDrop={handleDrop}
+                  className={`relative border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${dragActive ? 'border-emerald-600 bg-emerald-50/20' : 'border-slate-200 hover:border-slate-300 bg-white'}`}
+                >
+                  <input 
+                    type="file" 
+                    id="cv-file-input-modal" 
+                    className="hidden" 
+                    accept=".pdf,.doc,.docx,.txt"
+                    onChange={(e) => e.target.files && e.target.files[0] && handleFileUpload(e.target.files[0])}
+                  />
+                  <label htmlFor="cv-file-input-modal" className="cursor-pointer">
+                    {isParsing ? (
+                      <div className="flex flex-col items-center py-3">
+                        <RefreshCw className="h-8 w-8 text-emerald-600 animate-spin mb-3" />
+                        <span className="text-sm font-bold text-slate-900">Özgeçmiş Analiz Ediliyor...</span>
+                        <span className="text-xs text-slate-500 mt-1">Gemini LLM yetenekleri çıkartıyor</span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 border border-emerald-100 shadow-sm text-emerald-600 mb-3">
+                          <FileText className="h-6 w-6" />
+                        </div>
+                        <span className="text-sm font-bold text-slate-900">CV Yükle (PDF, Word, TXT)</span>
+                        <span className="text-xs text-slate-500 mt-1">Sürükle bırak veya tıkla</span>
+                        {currentUser.resumeFileName && (
+                          <span className="text-xs text-emerald-600 font-semibold mt-2">
+                            📄 Mevcut: {currentUser.resumeFileName}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </label>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-semibold text-slate-600 mb-1">Ad Soyad</label>
                 <input 

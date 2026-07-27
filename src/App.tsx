@@ -14,6 +14,7 @@ export default function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [activeTab, setActiveTab] = useState<'home' | 'applications'>('home');
 
   // Load user session on startup
   useEffect(() => {
@@ -111,6 +112,8 @@ export default function App() {
         onOpenAuth={handleOpenAuth}
         onOpenNotifications={() => setShowNotifications(!showNotifications)}
         unreadCount={unreadCount}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
       />
 
       {/* Main Content Area */}
@@ -119,7 +122,8 @@ export default function App() {
           currentUser.role === 'candidate' ? (
             <CandidateDashboard 
               currentUser={currentUser} 
-              onProfileUpdated={handleProfileUpdated} 
+              onProfileUpdated={handleProfileUpdated}
+              activeTab={activeTab}
             />
           ) : (
             <EmployerDashboard 

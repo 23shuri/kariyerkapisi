@@ -62,7 +62,7 @@ class UserModel(db.Model):
     resume_file_name = db.Column(db.String(256), nullable=True)
     resume_text = db.Column(db.Text, nullable=True)
     profile_strength = db.Column(db.Integer, default=20)
-    avatar_url = db.Column(db.String(512), nullable=True)
+    avatar_url = db.Column(db.Text, nullable=True)
 
     def to_dict(self):
         return {
@@ -203,27 +203,93 @@ def get_gemini_client():
     return None
 
 def calculate_heuristic_match(cv_text, job_desc, job_skills):
+    # ===== BOŞ PROFİL KONTROLÜ =====
+    cv_text_clean = (cv_text or '').strip()
+    cv_length = len(cv_text_clean)
+    
+    # CV çok kısa veya boşsa düşük skor ver
+    if cv_length < 50:
+        return {
+            'matchScore': 25,
+            'strongPoints': ['Profil henüz tamamlanmamış.'],
+            'developmentAreas': ['Lütfen özgeçmişinizi yükleyerek profilinizi tamamlayın.', 'Yeteneklerinizi ve deneyimlerinizi detaylı şekilde ekleyin.'],
+            'skillAlignment': 20,
+            'experienceAlignment': 25,
+            'culturalAlignment': 30,
+            'description': 'Profil bilgileri eksik olduğu için düşük uyum skoru hesaplandı.'
+        }
+    
+    # CV orta uzunluktaysa (50-200 karakter) orta skor
+    if cv_length < 200:
+        return {
+            'matchScore': 35,
+            'strongPoints': ['Profil kısmen doldurulmuş.'],
+            'developmentAreas': ['Daha detaylı deneyim bilgisi ekleyiniz.', 'Teknik becerilerinizi belirtiniz.'],
+            'skillAlignment': 30,
+            'experienceAlignment': 35,
+            'culturalAlignment': 40,
+            'description': 'Profil bilgileri yetersiz - daha fazla detay eklemeniz önerilir.'
+        }
+    
+    # ===== GERÇEK MATCH HESAPLAMA =====
     text_to_analyze = f"{cv_text.lower()} {job_desc.lower()}"
     matched_skills = [s for s in job_skills if s.lower() in text_to_analyze]
     total_skills = len(job_skills) or 5
     skill_ratio = len(matched_skills) / total_skills
-
-    skill_alignment = min(100, int(40 + (skill_ratio * 60)))
-    experience_alignment = 85 if ('senior' in text_to_analyze or 'kıdemli' in text_to_analyze) else 75
-    cultural_alignment = 80
-
+    
+    # Hiç skill eşleşmezse skor düşür
+    if len(matched_skills) == 0:
+        skill_alignment = 25
+    else:
+        skill_alignment = min(100, int(30 + (skill_ratio * 70)))
+    
+    # Deneyim kontrolü - sadece belirli anahtar kelimeler varsa yüksek skor
+    experience_keywords = ['yıl', 'year', 'deneyim', 'experience', 'çalış', 'work', 'proje', 'project']
+    has_experience = any(keyword in cv_text_clean.lower() for keyword in experience_keywords)
+    
+    if not has_experience:
+        experience_alignment = 30
+    elif 'senior' in text_to_analyze or 'kıdemli' in text_to_analyze:
+        experience_alignment = 85
+    else:
+        experience_alignment = 60
+    
+    # Kültürel uyum - CV ne kadar dolu o kadar yüksek
+    if cv_length > 500:
+        cultural_alignment = 80
+    elif cv_length > 300:
+        cultural_alignment = 60
+    else:
+        cultural_alignment = 40
+    
+    # Final skor hesapla
     match_score = int((skill_alignment * 0.5) + (experience_alignment * 0.3) + (cultural_alignment * 0.2))
-
-    strong_points = [
-        f"Özgeçmiş içeriğinizdeki yeteneklerin, ilandaki '{', '.join(matched_skills) if matched_skills else 'temel'}' beklentileri ile uyumlu olduğu görülmüştür.",
-        "Adayın deneyimi ve geçmiş sorumlulukları pozisyon beklentilerini karşılamaktadır."
-    ]
-
+    
+    # Maksimum skor sınırı - CV uzunluğuna göre
+    if cv_length < 300:
+        match_score = min(match_score, 45)
+    elif cv_length < 500:
+        match_score = min(match_score, 65)
+    
+    # Güçlü yönler
+    if matched_skills:
+        strong_points = [
+            f"Özgeçmişinizde '{', '.join(matched_skills[:3])}' becerileri tespit edildi.",
+            "Deneyimleriniz pozisyon gereksinimleriyle uyumlu görünüyor." if has_experience else "Pozisyonla ilgili bazı temel beceriler mevcut."
+        ]
+    else:
+        strong_points = ["Profil bilgileri mevcut ancak ilanla teknik eşleşme düşük."]
+    
+    # Gelişim alanları
     missing = [s for s in job_skills if s not in matched_skills]
-    dev_areas = [
-        f"İlandaki bazı gelişmiş gereksinimlerin ({', '.join(missing[:2]) if missing else 'sistem mimarisi'}) geliştirilmesi önerilir."
-    ]
-
+    if missing:
+        dev_areas = [
+            f"İlandaki şu becerileri geliştirmeniz önerilir: {', '.join(missing[:3])}",
+            "Daha fazla teknik detay ve proje deneyimi ekleyiniz." if cv_length < 400 else "Belirli projelerdeki rolünüzü detaylandırınız."
+        ]
+    else:
+        dev_areas = ["Profilinizdeki deneyimleri daha detaylı açıklayabilirsiniz."]
+    
     return {
         'matchScore': match_score,
         'strongPoints': strong_points,
@@ -231,7 +297,7 @@ def calculate_heuristic_match(cv_text, job_desc, job_skills):
         'skillAlignment': skill_alignment,
         'experienceAlignment': experience_alignment,
         'culturalAlignment': cultural_alignment,
-        'description': f"[Python SQL Motoru] Yapay zeka değerlendirmesi sonucunda %{match_score} oranında teknik uyum hesaplanmıştır."
+        'description': f"Yapay zeka analizi sonucunda %{match_score} uyum skoru hesaplandı. ({len(matched_skills)}/{total_skills} beceri eşleşmesi)"
     }
 
 # --- Seed Initial Data ---
@@ -480,6 +546,20 @@ def get_applications():
             return jsonify({'applications': []})
         
         apps = ApplicationModel.query.filter(ApplicationModel.job_id.in_(employer_job_ids)).all()
+        
+        # Update candidate avatar URLs from current user records
+        result = []
+        for app in apps:
+            app_dict = app.to_dict()
+            # Get fresh candidate data
+            candidate = UserModel.query.get(app.candidate_id)
+            if candidate:
+                app_dict['candidateAvatarUrl'] = candidate.avatar_url
+                app_dict['candidateName'] = candidate.full_name
+                app_dict['candidateTitle'] = candidate.title or 'Aday'
+            result.append(app_dict)
+        
+        return jsonify({'applications': result})
     else:
         # Return applications submitted by this candidate
         apps = ApplicationModel.query.filter_by(candidate_id=user_id).all()
@@ -838,6 +918,8 @@ def update_profile(user_id):
         user.resume_file_name = data['resumeFileName']
     if 'profileStrength' in data:
         user.profile_strength = int(data['profileStrength'])
+    if 'avatarUrl' in data:
+        user.avatar_url = data['avatarUrl']
 
     db.session.commit()
     return jsonify({'user': user.to_dict()})
