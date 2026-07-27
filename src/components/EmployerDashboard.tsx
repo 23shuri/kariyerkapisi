@@ -26,14 +26,17 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
   const [showPostJob, setShowPostJob] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
   const [jobTitle, setJobTitle] = useState('');
-  const [jobCompany, setJobCompany] = useState('');
   const [jobLocation, setJobLocation] = useState('');
   const [jobType, setJobType] = useState<'Uzaktan' | 'Hibrit' | 'Ofisten'>('Hibrit');
   const [jobSkills, setJobSkills] = useState('');
   const [jobExperience, setJobExperience] = useState('2-3 Yıl');
   const [jobDescription, setJobDescription] = useState('');
   const [jobSalary, setJobSalary] = useState('Rekabetçi');
-  const [jobPostError, setJobPostError] = useState('');
+
+  // Profile modal states
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [editingName, setEditingName] = useState(currentUser.fullName);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Selected applicant match states
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
@@ -73,13 +76,6 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
     setIsPosting(true);
 
     const skillsArray = jobSkills.split(',').map(s => s.trim()).filter(s => s.length > 0);
-    setJobPostError('');
-
-    if (!jobCompany.trim()) {
-      setJobPostError('Şirket adı zorunludur.');
-      setIsPosting(false);
-      return;
-    }
 
     try {
       const response = await fetch('/api/jobs', {
@@ -87,8 +83,7 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: jobTitle,
-          company: jobCompany.trim(),
-          employerId: currentUser.id,
+          company: currentUser.fullName.replace(' İK', '').trim(),
           location: jobLocation,
           type: jobType,
           skills: skillsArray,
@@ -102,20 +97,14 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
         setShowPostJob(false);
         // Reset form
         setJobTitle('');
-        setJobCompany('');
         setJobLocation('');
         setJobSkills('');
         setJobDescription('');
-        setJobPostError('');
         
         await fetchData();
-      } else {
-        const errData = await response.json();
-        setJobPostError(errData.error || 'İlan yayınlanamadı.');
       }
     } catch (err) {
       console.error('Post job failed:', err);
-      setJobPostError('Sunucu bağlantı hatası.');
     } finally {
       setIsPosting(false);
     }
@@ -127,15 +116,10 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
     
     try {
       const res = await fetch(`/api/jobs/${jobId}`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ employerId: currentUser.id })
+        method: 'DELETE'
       });
       if (res.ok) {
         await fetchData();
-      } else {
-        const errData = await res.json();
-        alert(errData.error || 'İlan silinemedi.');
       }
     } catch (err) {
       console.error('Delete job failed:', err);
@@ -178,6 +162,32 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
     }
   };
 
+  // Handle Save Profile
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingProfile(true);
+
+    try {
+      const response = await fetch(`/api/profile/${currentUser.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: editingName
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Update parent
+        window.location.reload(); // Simple refresh to update header name
+      }
+    } catch (err) {
+      console.error('Profile save error:', err);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
   // View Match Report Modal with CV details
   const handleViewMatch = async (app: Application) => {
     setSelectedApp(app);
@@ -206,6 +216,28 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 text-slate-800">
       
+      {/* Employer Profile Card */}
+      <div className="mb-6 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 font-bold text-lg">
+              {currentUser.fullName.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <h3 className="font-display text-base font-bold text-slate-900">{currentUser.fullName}</h3>
+              <p className="text-xs text-slate-400 font-medium">İşveren Hesabı</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowProfileModal(true)}
+            className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2 px-4 rounded-lg transition cursor-pointer"
+          >
+            <Building className="h-3.5 w-3.5" />
+            Profili Düzenle
+          </button>
+        </div>
+      </div>
+
       {/* 1. Statistics Row */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-4 mb-8">
         
@@ -288,12 +320,6 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
               <form onSubmit={handlePostJob} className="mb-6 p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-4">
                 <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Yeni İş İlanı Formu</h4>
                 
-                {jobPostError && (
-                  <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-                    {jobPostError}
-                  </div>
-                )}
-
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 mb-1">Pozisyon Başlığı</label>
                   <input 
@@ -302,18 +328,6 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
                     value={jobTitle}
                     onChange={(e) => setJobTitle(e.target.value)}
                     placeholder="Örn: Senior Frontend Developer"
-                    className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Şirket Adı <span className="text-red-500">*</span></label>
-                  <input 
-                    type="text"
-                    required
-                    value={jobCompany}
-                    onChange={(e) => setJobCompany(e.target.value)}
-                    placeholder="Şirketinizin tam adı"
                     className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
                   />
                 </div>
@@ -428,7 +442,7 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
                     </div>
                   </div>
 
-                  {(!job.employerId || job.employerId === currentUser.id) && (
+                  {(!job.company || job.company === currentUser.fullName.replace(' İK', '')) && (
                     <button
                       onClick={() => handleDeleteJob(job.id)}
                       className="text-slate-400 hover:text-red-500 p-1 rounded-lg hover:bg-red-50 transition cursor-pointer"
@@ -694,6 +708,56 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* PROFILE EDIT MODAL */}
+      {showProfileModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowProfileModal(false)} />
+          
+          <div className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-white">
+              <h3 className="font-display text-lg font-bold text-slate-900">Profil Düzenle</h3>
+              <button onClick={() => setShowProfileModal(false)} className="text-slate-400 hover:text-slate-600 rounded-full p-1.5 transition">
+                ✕
+              </button>
+            </div>
+            
+            <form onSubmit={handleSaveProfile} className="p-6 overflow-y-auto flex-1 space-y-4">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 font-bold text-2xl">
+                  {editingName.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Şirket/İşveren Adı</label>
+                  <input 
+                    type="text" 
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <p className="text-xs font-semibold text-slate-500 mb-1">Hesap Tipi</p>
+                <p className="text-sm font-bold text-slate-900">İşveren Hesabı</p>
+              </div>
+            </form>
+            
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2">
+              <button type="button" onClick={() => setShowProfileModal(false)} className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs py-2 px-4 rounded-xl transition">
+                İptal
+              </button>
+              <button 
+                onClick={handleSaveProfile}
+                disabled={isSavingProfile}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-2 px-5 rounded-xl transition disabled:opacity-50">
+                {isSavingProfile ? 'Kaydediliyor...' : 'Kaydet'}
+              </button>
+            </div>
           </div>
         </div>
       )}
