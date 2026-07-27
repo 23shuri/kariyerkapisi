@@ -420,7 +420,7 @@ def create_job():
     description = data.get('description')
 
     if not title or not company or not location or not description:
-        return jsonify({'error': 'Gerekli ilan detayları eksik.'}), 400
+        return jsonify({'error': 'Gerekli ilan detayları eksik. Lütfen şirket adını da dahil edin.'}), 400
 
     new_job = JobModel(
         id=f"job_{int(time.time() * 1000)}",
@@ -443,6 +443,13 @@ def create_job():
 @app.route('/api/jobs/<job_id>', methods=['DELETE'])
 def delete_job(job_id):
     job = JobModel.query.get(job_id)
+    if not job:
+        return jsonify({'error': 'İlan bulunamadı.'}), 404
+        
+    # Sadece ilanı oluşturan kişi silebilir (veya ilk yüklenen mock ilanlar silinebilir)
+    if job.employer_id and job.employer_id != employer_id:
+        return jsonify({'error': 'Yetkisiz işlem. Sadece kendi ilanlarınızı silebilirsiniz.'}), 403
+
     if job:
         db.session.delete(job)
         ApplicationModel.query.filter_by(job_id=job_id).delete()

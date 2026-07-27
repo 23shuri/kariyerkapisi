@@ -26,12 +26,14 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
   const [showPostJob, setShowPostJob] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
   const [jobTitle, setJobTitle] = useState('');
+  const [jobCompany, setJobCompany] = useState('');
   const [jobLocation, setJobLocation] = useState('');
   const [jobType, setJobType] = useState<'Uzaktan' | 'Hibrit' | 'Ofisten'>('Hibrit');
   const [jobSkills, setJobSkills] = useState('');
   const [jobExperience, setJobExperience] = useState('2-3 Yıl');
   const [jobDescription, setJobDescription] = useState('');
   const [jobSalary, setJobSalary] = useState('Rekabetçi');
+  const [jobPostError, setJobPostError] = useState('');
 
   // Selected applicant match states
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
@@ -71,6 +73,13 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
     setIsPosting(true);
 
     const skillsArray = jobSkills.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    setJobPostError('');
+
+    if (!jobCompany.trim()) {
+      setJobPostError('Şirket adı zorunludur.');
+      setIsPosting(false);
+      return;
+    }
 
     try {
       const response = await fetch('/api/jobs', {
@@ -78,7 +87,8 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: jobTitle,
-          company: currentUser.fullName.replace(' İK', ''),
+          company: jobCompany.trim(),
+          employerId: currentUser.id,
           location: jobLocation,
           type: jobType,
           skills: skillsArray,
@@ -92,14 +102,20 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
         setShowPostJob(false);
         // Reset form
         setJobTitle('');
+        setJobCompany('');
         setJobLocation('');
         setJobSkills('');
         setJobDescription('');
+        setJobPostError('');
         
         await fetchData();
+      } else {
+        const errData = await response.json();
+        setJobPostError(errData.error || 'İlan yayınlanamadı.');
       }
     } catch (err) {
       console.error('Post job failed:', err);
+      setJobPostError('Sunucu bağlantı hatası.');
     } finally {
       setIsPosting(false);
     }
@@ -111,10 +127,15 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
     
     try {
       const res = await fetch(`/api/jobs/${jobId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employerId: currentUser.id })
       });
       if (res.ok) {
         await fetchData();
+      } else {
+        const errData = await res.json();
+        alert(errData.error || 'İlan silinemedi.');
       }
     } catch (err) {
       console.error('Delete job failed:', err);
@@ -267,6 +288,12 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
               <form onSubmit={handlePostJob} className="mb-6 p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-4">
                 <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Yeni İş İlanı Formu</h4>
                 
+                {jobPostError && (
+                  <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                    {jobPostError}
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-600 mb-1">Pozisyon Başlığı</label>
                   <input 
@@ -275,6 +302,18 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
                     value={jobTitle}
                     onChange={(e) => setJobTitle(e.target.value)}
                     placeholder="Örn: Senior Frontend Developer"
+                    className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Şirket Adı <span className="text-red-500">*</span></label>
+                  <input 
+                    type="text"
+                    required
+                    value={jobCompany}
+                    onChange={(e) => setJobCompany(e.target.value)}
+                    placeholder="Şirketinizin tam adı"
                     className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
                   />
                 </div>
@@ -389,13 +428,15 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => handleDeleteJob(job.id)}
-                    className="text-slate-400 hover:text-red-500 p-1 rounded-lg hover:bg-red-50 transition cursor-pointer"
-                    title="İlanı Sil"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  {(!job.employerId || job.employerId === currentUser.id) && (
+                    <button
+                      onClick={() => handleDeleteJob(job.id)}
+                      className="text-slate-400 hover:text-red-500 p-1 rounded-lg hover:bg-red-50 transition cursor-pointer"
+                      title="İlanı Sil"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
