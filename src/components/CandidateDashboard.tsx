@@ -29,6 +29,10 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
   const [resumeText, setResumeText] = useState(currentUser.resumeText || '');
   const [dragActive, setDragActive] = useState(false);
   
+  // Profile modal states
+  const [showProfileViewModal, setShowProfileViewModal] = useState(false);
+  const [showProfileEditModal, setShowProfileEditModal] = useState(false);
+  
   // Selected Match/Job details for modal
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [activeMatch, setActiveMatch] = useState<MatchDetail | null>(null);
@@ -295,6 +299,24 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
                 <h3 className="font-display text-base font-bold text-slate-900">{currentUser.fullName}</h3>
                 <p className="text-xs text-slate-400 font-medium">{currentUser.title || 'Başlık Tanımlanmadı'}</p>
               </div>
+            </div>
+
+            {/* Profile Action Buttons */}
+            <div className="flex gap-2 mb-4">
+              <button
+                onClick={() => setShowProfileViewModal(true)}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2 px-3 rounded-lg transition cursor-pointer"
+              >
+                <User className="h-3.5 w-3.5" />
+                Profili Görüntüle
+              </button>
+              <button
+                onClick={() => setShowProfileEditModal(true)}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2 px-3 rounded-lg transition cursor-pointer"
+              >
+                <Award className="h-3.5 w-3.5" />
+                Profili Düzenle
+              </button>
             </div>
 
             {/* Profile Strength */}
@@ -738,6 +760,174 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* PROFILE VIEW MODAL */}
+      {showProfileViewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowProfileViewModal(false)} />
+          
+          <div className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-white">
+              <h3 className="font-display text-lg font-bold text-slate-900">Profil Bilgilerim</h3>
+              <button onClick={() => setShowProfileViewModal(false)} className="text-slate-400 hover:text-slate-600 rounded-full p-1.5 transition">
+                ✕
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 space-y-4">
+              <div className="flex items-center gap-4 mb-4">
+                {currentUser.avatarUrl ? (
+                  <img src={currentUser.avatarUrl} alt={currentUser.fullName} className="h-16 w-16 rounded-2xl object-cover ring-2 ring-emerald-100" referrerPolicy="no-referrer" />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 font-bold text-2xl">
+                    {currentUser.fullName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  <h4 className="text-base font-bold text-slate-900">{currentUser.fullName}</h4>
+                  <p className="text-sm text-slate-500">{currentUser.email}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-50 rounded-xl p-3">
+                  <p className="text-xs font-semibold text-slate-500 mb-1">Unvan</p>
+                  <p className="text-sm font-bold text-slate-900">{currentUser.title || 'Belirtilmemiş'}</p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3">
+                  <p className="text-xs font-semibold text-slate-500 mb-1">Deneyim</p>
+                  <p className="text-sm font-bold text-slate-900">{currentUser.experienceYears || 0} Yıl</p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3">
+                  <p className="text-xs font-semibold text-slate-500 mb-1">Konum</p>
+                  <p className="text-sm font-bold text-slate-900">{currentUser.location || 'Belirtilmemiş'}</p>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-3">
+                  <p className="text-xs font-semibold text-slate-500 mb-1">Profil Gücü</p>
+                  <p className="text-sm font-bold text-emerald-600">%{currentUser.profileStrength || 20}</p>
+                </div>
+              </div>
+              
+              <div className="bg-slate-50 rounded-xl p-3">
+                <p className="text-xs font-semibold text-slate-500 mb-2">Yetenekler</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(currentUser.skills || []).map((skill, idx) => (
+                    <span key={idx} className="inline-flex items-center rounded-lg bg-emerald-50 border border-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                      {skill}
+                    </span>
+                  ))}
+                  {(!currentUser.skills || currentUser.skills.length === 0) && (
+                    <span className="text-xs text-slate-400">Henüz yetenek eklenmedi</span>
+                  )}
+                </div>
+              </div>
+              
+              {currentUser.resumeFileName && (
+                <div className="bg-emerald-50 rounded-xl p-3 border border-emerald-100">
+                  <p className="text-xs font-semibold text-emerald-700 mb-1">📄 CV Dosyası</p>
+                  <p className="text-xs text-emerald-600">{currentUser.resumeFileName}</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+              <button onClick={() => setShowProfileViewModal(false)} className="bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs py-2 px-5 rounded-xl transition">
+                Kapat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PROFILE EDIT MODAL */}
+      {showProfileEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowProfileEditModal(false)} />
+          
+          <div className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl max-h-[90vh] flex flex-col">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-white">
+              <h3 className="font-display text-lg font-bold text-slate-900">Profil Düzenle</h3>
+              <button onClick={() => setShowProfileEditModal(false)} className="text-slate-400 hover:text-slate-600 rounded-full p-1.5 transition">
+                ✕
+              </button>
+            </div>
+            
+            <form onSubmit={handleSaveProfile} className="p-6 overflow-y-auto flex-1 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Ad Soyad</label>
+                <input 
+                  type="text" 
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Unvan</label>
+                <input 
+                  type="text" 
+                  value={title}
+                  placeholder="Örn: Frontend Developer"
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Deneyim (Yıl)</label>
+                  <input 
+                    type="number" 
+                    value={experienceYears}
+                    onChange={(e) => setExperienceYears(Number(e.target.value))}
+                    className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Konum</label>
+                  <input 
+                    type="text" 
+                    value={location}
+                    placeholder="İstanbul"
+                    onChange={(e) => setLocation(e.target.value)}
+                    className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Yetenekler (Virgülle Ayırın)</label>
+                <input 
+                  type="text" 
+                  value={skillsText}
+                  placeholder="React, TypeScript, Node.js"
+                  onChange={(e) => setSkillsText(e.target.value)}
+                  className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
+                />
+              </div>
+
+              {saveProfileMessage && (
+                <div className={`text-xs text-center font-medium p-2 rounded-lg ${saveProfileMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+                  {saveProfileMessage.text}
+                </div>
+              )}
+            </form>
+            
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2">
+              <button type="button" onClick={() => setShowProfileEditModal(false)} className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs py-2 px-4 rounded-xl transition">
+                İptal
+              </button>
+              <button 
+                onClick={handleSaveProfile}
+                disabled={isSavingProfile}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-2 px-5 rounded-xl transition disabled:opacity-50">
+                {isSavingProfile ? 'Kaydediliyor...' : 'Kaydet'}
+              </button>
+            </div>
           </div>
         </div>
       )}
