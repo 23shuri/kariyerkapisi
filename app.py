@@ -303,6 +303,22 @@ class UserProfileExtendedModel(db.Model):
             'portfolioUrl': self.portfolio_url
         }
 
+class SavedJobModel(db.Model):
+    __tablename__ = 'saved_jobs'
+
+    id = db.Column(db.String(64), primary_key=True)
+    user_id = db.Column(db.String(64), nullable=False)
+    job_id = db.Column(db.String(64), nullable=False)
+    saved_at = db.Column(db.String(64), nullable=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'userId': self.user_id,
+            'jobId': self.job_id,
+            'savedAt': self.saved_at
+        }
+
 # --- Gemini Client Helper ---
 def get_gemini_client():
     api_key = os.getenv('GEMINI_API_KEY')
@@ -1737,6 +1753,86 @@ def calculate_network_score(user_id):
     score_model.last_updated = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     db.session.commit()
+
+# ============================================
+# SAVED JOBS ENDPOINTS
+# ============================================
+
+# 29. Saved Jobs: Save a Job
+@app.route('/api/saved-jobs', methods=['POST'])
+def save_job():
+    data = request.get_json() or {}
+    user_id = data.get('userId')
+    job_id = data.get('jobId')
+    
+    if not user_id or not job_id:
+        return jsonify({'error': 'userId ve jobId gereklidir.'}), 400
+    
+    # Check if already saved
+    existing = SavedJobModel.query.filter_by(user_id=user_id, job_id=job_id).first()
+    if existing:
+        return jsonify({'error': 'Bu ilan zaten kaydedilmiş.'}), 400
+    
+    new_saved = SavedJobModel(
+        id=f"saved_{int(time.time() * 1000)}",
+        user_id=user_id,
+        job_id=job_id,
+        saved_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    )
+    db.session.add(new_saved)
+    db.session.commit()
+    
+    return jsonify({'savedJob': new_saved.to_dict()}), 201
+
+# 30. Saved Jobs: Get User's Saved Jobs
+@app.route('/api/saved-jobs', methods=['GET'])
+def get_saved_jobs():
+    user_id = request.args.get('userId')
+    
+    if not user_id:
+        return jsonify({'error': 'userId gereklidir.'}), 400
+    
+    saved_jobs = SavedJobModel.query.filter_by(user_id=user_id).all()
+    
+    result = []
+    for saved in saved_jobs:
+        job = JobModel.query.filter_by(id=saved.job_id).first()
+        if job:
+            result.append({
+                'savedJob': saved.to_dict(),
+                'job': job.to_dict()
+            })
+    
+    return jsonify({'savedJobs': result})
+
+# 31. Saved Jobs: Remove a Saved Job
+@app.route('/api/saved-jobs/<saved_job_id>', methods=['DELETE'])
+def remove_saved_job(saved_job_id):
+    saved_job = SavedJobModel.query.filter_by(id=saved_job_id).first()
+    
+    if not saved_job:
+        return jsonify({'error': 'Kaydedilmiş ilan bulunamadı.'}), 404
+    
+    db.session.delete(saved_job)
+    db.session.commit()
+    
+    return jsonify({'success': True})
+
+# 32. Saved Jobs: Check if Job is Saved
+@app.route('/api/saved-jobs/check', methods=['GET'])
+def check_if_saved():
+    user_id = request.args.get('userId')
+    job_id = request.args.get('jobId')
+    
+    if not user_id or not job_id:
+        return jsonify({'error': 'userId ve jobId gereklidir.'}), 400
+    
+    saved = SavedJobModel.query.filter_by(user_id=user_id, job_id=job_id).first()
+    
+    return jsonify({
+        'isSaved': saved is not None,
+        'savedJobId': saved.id if saved else None
+    })
 
 # ==================== ADMIN ENDPOINTS ====================
 
