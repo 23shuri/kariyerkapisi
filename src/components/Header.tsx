@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Briefcase, LogOut, User as UserIcon, Building, Sparkles, Bell, Users } from 'lucide-react';
 import { User } from '../types';
+import { ProfileMenu } from './ProfileMenu';
 
 interface HeaderProps {
   currentUser: User | null;
   onLogout: () => void;
   onOpenAuth: (role: 'candidate' | 'employer') => void;
   onOpenNotifications?: () => void;
+  onNavigateToSavedJobs?: () => void;
   unreadCount?: number;
   activeTab?: 'home' | 'applications';
   onTabChange?: (tab: 'home' | 'applications') => void;
@@ -19,6 +21,7 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout, 
   onOpenAuth, 
   onOpenNotifications, 
+  onNavigateToSavedJobs,
   unreadCount = 0,
   activeTab = 'home',
   onTabChange,
@@ -127,41 +130,14 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </div>
               
-              {currentUser.avatarUrl ? (
-                <img 
-                  src={currentUser.avatarUrl} 
-                  alt={currentUser.fullName} 
-                  className="h-9 w-9 rounded-lg object-cover ring-2 ring-slate-100"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 font-bold text-sm">
-                  {currentUser.fullName.charAt(0).toUpperCase()}
-                </div>
-              )}
-
-              {/* Notification Bell */}
-              <button
-                onClick={onOpenNotifications}
-                className="relative inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-emerald-600 transition-all duration-150"
-                title="Bildirimler"
-              >
-                <Bell className="h-4 w-4" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
-                )}
-              </button>
-
-              <button
-                onClick={onLogout}
-                className="inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all duration-150"
-                title="Çıkış Yap"
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="hidden sm:inline text-xs font-medium">Çıkış</span>
-              </button>
+              {/* Profile Menu Dropdown */}
+              <ProfileMenu
+                currentUser={currentUser}
+                onLogout={onLogout}
+                onNavigateToSavedJobs={onNavigateToSavedJobs || (() => {})}
+                onNavigateToNotifications={onOpenNotifications || (() => {})}
+                unreadCount={unreadCount}
+              />
             </div>
           ) : (
             <div className="flex items-center space-x-2">

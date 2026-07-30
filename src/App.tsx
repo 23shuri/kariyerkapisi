@@ -6,6 +6,7 @@ import { CandidateDashboard } from './components/CandidateDashboard';
 import { EmployerDashboard } from './components/EmployerDashboard';
 import { AdminDashboard } from './components/AdminDashboard';
 import { NetworkDashboard } from './components/NetworkDashboard';
+import { SavedJobsPage } from './components/SavedJobsPage';
 import { NotificationPanel } from './components/NotificationPanel';
 import { User, Role, Notification } from './types';
 
@@ -18,6 +19,7 @@ export default function App() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [activeTab, setActiveTab] = useState<'home' | 'applications'>('home');
   const [activeMainView, setActiveMainView] = useState<'dashboard' | 'network'>('dashboard');
+  const [activeView, setActiveView] = useState<'main' | 'savedJobs' | 'notifications'>('main');
 
   // Load user session on startup
   useEffect(() => {
@@ -106,6 +108,10 @@ export default function App() {
     localStorage.setItem('kariyer_kapisi_session', JSON.stringify(updatedUser));
   };
 
+  const handleNavigateToSavedJobs = () => {
+    setActiveView('savedJobs');
+  };
+
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col font-sans text-slate-800">
       {/* Header Navigation */}
@@ -114,6 +120,7 @@ export default function App() {
         onLogout={handleLogout} 
         onOpenAuth={handleOpenAuth}
         onOpenNotifications={() => setShowNotifications(!showNotifications)}
+        onNavigateToSavedJobs={handleNavigateToSavedJobs}
         unreadCount={unreadCount}
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -123,7 +130,12 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1">
-        {currentUser ? (
+        {activeView === 'savedJobs' && currentUser ? (
+          <SavedJobsPage 
+            currentUser={currentUser} 
+            onBack={() => setActiveView('main')} 
+          />
+        ) : currentUser ? (
           currentUser.role === 'admin' ? (
             <AdminDashboard currentUser={currentUser} />
           ) : activeMainView === 'network' ? (
