@@ -45,35 +45,52 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Navigation Tabs - Only for logged in candidates */}
-          {currentUser && currentUser.role === 'candidate' && onTabChange && onMainViewChange && (
+          {/* Navigation Tabs - For logged in users */}
+          {currentUser && onMainViewChange && (
             <nav className="hidden md:flex items-center space-x-1">
-              <button
-                onClick={() => {
-                  onMainViewChange('dashboard');
-                  onTabChange('home');
-                }}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
-                  activeMainView === 'dashboard'
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'text-slate-600 hover:text-emerald-600 hover:bg-slate-50'
-                }`}
-              >
-                Ana Ekran
-              </button>
-              <button
-                onClick={() => {
-                  onMainViewChange('dashboard');
-                  onTabChange('applications');
-                }}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
-                  activeMainView === 'dashboard' && activeTab === 'applications'
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'text-slate-600 hover:text-emerald-600 hover:bg-slate-50'
-                }`}
-              >
-                Mevcut Başvurular
-              </button>
+              {currentUser.role === 'candidate' && onTabChange && (
+                <>
+                  <button
+                    onClick={() => {
+                      onMainViewChange('dashboard');
+                      onTabChange('home');
+                    }}
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
+                      activeMainView === 'dashboard' && activeTab === 'home'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'text-slate-600 hover:text-emerald-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    Ana Ekran
+                  </button>
+                  <button
+                    onClick={() => {
+                      onMainViewChange('dashboard');
+                      onTabChange('applications');
+                    }}
+                    className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
+                      activeMainView === 'dashboard' && activeTab === 'applications'
+                        ? 'bg-emerald-50 text-emerald-700'
+                        : 'text-slate-600 hover:text-emerald-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    Mevcut Başvurular
+                  </button>
+                </>
+              )}
+              {currentUser.role === 'employer' && (
+                <button
+                  onClick={() => onMainViewChange('dashboard')}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
+                    activeMainView === 'dashboard'
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : 'text-slate-600 hover:text-emerald-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <Briefcase className="h-4 w-4 inline mr-1" />
+                  İş İlanları
+                </button>
+              )}
               <button
                 onClick={() => onMainViewChange('network')}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
