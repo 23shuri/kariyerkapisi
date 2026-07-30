@@ -19,7 +19,7 @@ export interface Job {
   id: string;
   title: string;
   company: string;
-  employerId: string;
+  employerId?: string;
   location: string;
   type: 'Uzaktan' | 'Hibrit' | 'Ofisten';
   skills: string[];

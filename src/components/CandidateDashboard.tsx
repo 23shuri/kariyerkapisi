@@ -379,27 +379,77 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
               </button>
             </div>
 
-            {/* Profile Strength */}
-            <div className="mb-4 rounded-2xl bg-emerald-50/40 p-4 border border-emerald-100/30">
-              <div className="flex items-center justify-between text-xs font-semibold text-emerald-950 mb-1.5">
-                <span className="flex items-center gap-1">
-                  <Sparkles className="h-3.5 w-3.5 text-emerald-600 animate-spin" />
-                  Profil Gücü
-                </span>
-                <span>%{currentUser.profileStrength || 20}</span>
-              </div>
-              <div className="h-1.5 w-full bg-emerald-100/50 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-emerald-600 rounded-full transition-all duration-500" 
-                  style={{ width: `${currentUser.profileStrength || 20}%` }}
-                />
-              </div>
-              <p className="text-[10px] text-emerald-700/80 font-medium mt-1.5 leading-normal">
-                {currentUser.profileStrength && currentUser.profileStrength >= 80 
-                  ? 'Harika! Özgeçmişiniz başarıyla analiz edildi, ilanlarla eşleşmeye hazırsınız.' 
-                  : 'Yapay zeka eşleştirme oranını yükseltmek için CV yükleyin.'}
-              </p>
-            </div>
+            {/* Profil Tamamlama Göstergesi */}
+            {(() => {
+              const steps = [
+                { label: 'Ad Soyad', done: !!currentUser.fullName },
+                { label: 'Unvan', done: !!currentUser.title },
+                { label: 'Konum', done: !!currentUser.location },
+                { label: 'Yetenekler', done: !!(currentUser.skills && currentUser.skills.length > 0) },
+                { label: 'Deneyim', done: !!(currentUser.experienceYears && currentUser.experienceYears > 0) },
+                { label: 'CV Yüklendi', done: !!currentUser.resumeFileName },
+                { label: 'Profil Fotoğrafı', done: !!currentUser.avatarUrl },
+              ];
+              const completedCount = steps.filter(s => s.done).length;
+              const percentage = Math.round((completedCount / steps.length) * 100);
+              const color = percentage >= 80 ? 'emerald' : percentage >= 50 ? 'amber' : 'red';
+
+              return (
+                <div className="mb-4 rounded-2xl bg-slate-50 p-4 border border-slate-200">
+                  {/* Başlık ve yüzde */}
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                      <Sparkles className={`h-3.5 w-3.5 text-${color}-500`} />
+                      Profil Tamamlama
+                    </span>
+                    <span className={`text-sm font-black text-${color}-600`}>%{percentage}</span>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden mb-3">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        color === 'emerald' ? 'bg-emerald-500' :
+                        color === 'amber' ? 'bg-amber-400' : 'bg-red-400'
+                      }`}
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+
+                  {/* Adımlar */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {steps.map((step, idx) => (
+                      <div key={idx} className={`flex items-center gap-1.5 text-[10px] font-semibold rounded-lg px-2 py-1 ${
+                        step.done
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                          : 'bg-white text-slate-400 border border-slate-200'
+                      }`}>
+                        <span className={`h-3.5 w-3.5 rounded-full flex items-center justify-center shrink-0 text-[8px] font-black ${
+                          step.done ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'
+                        }`}>
+                          {step.done ? '✓' : '○'}
+                        </span>
+                        {step.label}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Mesaj */}
+                  <p className={`text-[10px] font-medium mt-2.5 ${
+                    color === 'emerald' ? 'text-emerald-600' :
+                    color === 'amber' ? 'text-amber-600' : 'text-red-500'
+                  }`}>
+                    {percentage === 100
+                      ? '🎉 Profiliniz tam! İlanlarla eşleşmeye hazırsınız.'
+                      : percentage >= 80
+                      ? `Harika! ${steps.length - completedCount} adım kaldı.`
+                      : percentage >= 50
+                      ? `${completedCount}/${steps.length} adım tamamlandı. Profili güçlendirin.`
+                      : `Profiliniz zayıf. Lütfen eksik bilgileri doldurun.`}
+                  </p>
+                </div>
+              );
+            })()}
           </div>
         </div>
 
