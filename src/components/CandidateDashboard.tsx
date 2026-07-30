@@ -230,16 +230,24 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
       });
 
       const data = await safeJson(response);
-      if (response.ok && data) {
+      
+      if (response.ok && data?.match) {
         setActiveMatch(data.match);
         fetchData();
+      } else if (!response.ok) {
+        // Başvuru başarısız - modal'ı kapat ve hata göster
+        setShowMatchModal(false);
+        console.error('Application failed:', data?.error);
       } else {
+        // Alternative: match detail'ı fetch et
         const matchRes = await fetch(`/api/matches/${job.id}/${currentUser.id}`);
         const matchData = await safeJson(matchRes);
         setActiveMatch(matchData?.match || null);
+        fetchData();
       }
     } catch (err) {
       console.error('Application failed:', err);
+      setShowMatchModal(false);
     } finally {
       setIsLoadingMatch(false);
       setIsApplying(false);

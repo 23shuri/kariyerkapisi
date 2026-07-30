@@ -118,10 +118,11 @@ export const Header: React.FC<HeaderProps> = ({
 
               <button
                 onClick={onLogout}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-red-500 transition-all duration-150"
+                className="inline-flex items-center gap-2 h-9 px-3 rounded-lg border border-slate-200 text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all duration-150"
                 title="Çıkış Yap"
               >
                 <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline text-xs font-medium">Çıkış</span>
               </button>
             </div>
           ) : (

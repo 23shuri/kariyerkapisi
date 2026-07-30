@@ -4,6 +4,7 @@ import { Hero } from './components/Hero';
 import { AuthModal } from './components/AuthModal';
 import { CandidateDashboard } from './components/CandidateDashboard';
 import { EmployerDashboard } from './components/EmployerDashboard';
+import { AdminDashboard } from './components/AdminDashboard';
 import { NotificationPanel } from './components/NotificationPanel';
 import { User, Role, Notification } from './types';
 
@@ -119,7 +120,9 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1">
         {currentUser ? (
-          currentUser.role === 'candidate' ? (
+          currentUser.role === 'admin' ? (
+            <AdminDashboard currentUser={currentUser} />
+          ) : currentUser.role === 'candidate' ? (
             <CandidateDashboard 
               currentUser={currentUser} 
               onProfileUpdated={handleProfileUpdated}

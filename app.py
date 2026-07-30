@@ -54,7 +54,7 @@ class UserModel(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     full_name = db.Column(db.String(120), nullable=False)
-    role = db.Column(db.String(32), nullable=False) # 'candidate' or 'employer'
+    role = db.Column(db.String(32), nullable=False) # 'candidate', 'employer', or 'admin'
     title = db.Column(db.String(120), nullable=True)
     location = db.Column(db.String(120), nullable=True)
     experience_years = db.Column(db.Integer, default=0)
@@ -120,7 +120,7 @@ class ApplicationModel(db.Model):
     candidate_id = db.Column(db.String(64), nullable=False)
     candidate_name = db.Column(db.String(120), nullable=False)
     candidate_title = db.Column(db.String(120), nullable=True)
-    candidate_avatar_url = db.Column(db.String(512), nullable=True)
+    candidate_avatar_url = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(64), default='Yeni') # 'Yeni', 'Mülakat', 'Kabul', 'Red'
     match_score = db.Column(db.Integer, default=75)
     applied_at = db.Column(db.String(64), default='Az önce')
@@ -304,6 +304,19 @@ def calculate_heuristic_match(cv_text, job_desc, job_skills):
 def seed_data():
     if UserModel.query.count() == 0:
         pw_hash = bcrypt.generate_password_hash('123456').decode('utf-8')
+        
+        # Admin user
+        admin_user = UserModel(
+            id='admin_argem',
+            email='adminargemerkezi23@gmail.com',
+            password_hash=bcrypt.generate_password_hash('adminargemerkezi23@gmail.com').decode('utf-8'),
+            full_name='Admin Argem Merkezi',
+            role='admin',
+            title='Sistem Yöneticisi',
+            location='İstanbul',
+            profile_strength=100
+        )
+        
         user_ayse = UserModel(
             id='cand_ayse',
             email='ayse@yilmaz.com',
@@ -331,6 +344,7 @@ def seed_data():
             avatar_url='https://lh3.googleusercontent.com/aida-public/AB6AXuD283LZeZVb1NUv5ILaNAp70WUqLgPUA_f-NtLC3jkXRbsuhN5tHB-jm-FBAqVzZI2vGXaU7Tut85ow6McncO73wuh6a2lmOHcEATFUfSXFLOVTBwdLUPP32eMuCp9wg45XwRS9k1rQQCg19VYQGEhfssqqQAlzcKD7j3heW59WTOsPfhoMaYdECZ6-6aZQp4_6d-_bghIvSWl79iQYJFwTtbbfsxSD4SDY-xQCWotLVNmHUwS3nRzC_T23U8GOjRFIY37NGTR2F9c'
         )
 
+        db.session.add(admin_user)
         db.session.add(user_ayse)
         db.session.add(user_hr)
 
@@ -656,14 +670,14 @@ Sadece JSON döndür, başka metin yazma.
 
     db.session.add(match_detail)
 
-    # Save Application
+    # Save Application - Don't save avatar to avoid data size issues
     new_app = ApplicationModel(
         id=f"app_{int(time.time() * 1000)}",
         job_id=job_id,
         candidate_id=candidate_id,
         candidate_name=candidate.full_name,
         candidate_title=candidate.title or 'Aday',
-        candidate_avatar_url=candidate.avatar_url or 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80',
+        candidate_avatar_url=None,  # Avatar stored in users table, not here
         status='Yeni',
         match_score=match_score,
         applied_at='Az önce'
@@ -1047,6 +1061,99 @@ def application_decision(app_id):
         'application': app_obj.to_dict(),
         'notification': notification.to_dict()
     })
+
+# ==================== ADMIN ENDPOINTS ====================
+
+# 18. Admin: Get All Users
+@app.route('/api/admin/users', methods=['GET'])
+def admin_get_users():
+    users = UserModel.query.all()
+    return jsonify({'users': [u.to_dict() for u in users]})
+
+# 19. Admin: Get All Jobs
+@app.route('/api/admin/jobs', methods=['GET'])
+def admin_get_jobs():
+    jobs = JobModel.query.all()
+    return jsonify({'jobs': [j.to_dict() for j in jobs]})
+
+# 20. Admin: Get All Applications
+@app.route('/api/admin/applications', methods=['GET'])
+def admin_get_applications():
+    apps = ApplicationModel.query.all()
+    return jsonify({'applications': [a.to_dict() for a in apps]})
+
+# 21. Admin: Get Stats
+@app.route('/api/admin/stats', methods=['GET'])
+def admin_get_stats():
+    total_users = UserModel.query.count()
+    total_candidates = UserModel.query.filter_by(role='candidate').count()
+    total_employers = UserModel.query.filter_by(role='employer').count()
+    total_jobs = JobModel.query.count()
+    total_apps = ApplicationModel.query.count()
+    
+    # Calculate average match score
+    apps = ApplicationModel.query.all()
+    avg_match = sum([a.match_score for a in apps]) // len(apps) if apps else 0
+    
+    pending = ApplicationModel.query.filter(ApplicationModel.status.in_(['Yeni', 'Mülakat'])).count()
+    
+    return jsonify({
+        'totalUsers': total_users,
+        'totalCandidates': total_candidates,
+        'totalEmployers': total_employers,
+        'totalJobs': total_jobs,
+        'totalApplications': total_apps,
+        'avgMatchScore': avg_match,
+        'activeJobs': total_jobs,
+        'pendingApplications': pending
+    })
+
+# 22. Admin: Delete User
+@app.route('/api/admin/users/<user_id>', methods=['DELETE'])
+def admin_delete_user(user_id):
+    user = UserModel.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'Kullanıcı bulunamadı.'}), 404
+    
+    # Delete related data
+    ApplicationModel.query.filter_by(candidate_id=user_id).delete()
+    NotificationModel.query.filter_by(user_id=user_id).delete()
+    
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify({'success': True})
+
+# 23. Admin: Update User
+@app.route('/api/admin/users/<user_id>', methods=['PATCH'])
+def admin_update_user(user_id):
+    user = UserModel.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'Kullanıcı bulunamadı.'}), 404
+    
+    data = request.get_json() or {}
+    if 'fullName' in data:
+        user.full_name = data['fullName']
+    if 'email' in data:
+        user.email = data['email']
+    if 'title' in data:
+        user.title = data['title']
+    if 'location' in data:
+        user.location = data['location']
+    
+    db.session.commit()
+    return jsonify({'user': user.to_dict()})
+
+# 24. Admin: Delete Job
+@app.route('/api/admin/jobs/<job_id>', methods=['DELETE'])
+def admin_delete_job(job_id):
+    job = JobModel.query.get(job_id)
+    if not job:
+        return jsonify({'error': 'İlan bulunamadı.'}), 404
+    
+    ApplicationModel.query.filter_by(job_id=job_id).delete()
+    db.session.delete(job)
+    db.session.commit()
+    return jsonify({'success': True})
 
 if __name__ == '__main__':
     with app.app_context():
