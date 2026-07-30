@@ -341,7 +341,7 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
         <div className="lg:col-span-4 space-y-6">
           
           {/* Profile card */}
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+          <div className="panel rounded-3xl p-6">
             <div className="flex items-center space-x-4 mb-5">
               {currentUser.avatarUrl ? (
                 <img 
@@ -407,7 +407,7 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
         <div className="lg:col-span-8 space-y-6">
           
           {/* Job Feed header search */}
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+          <div className="panel rounded-3xl p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
               <div>
                 <h3 className="font-display text-base font-bold text-slate-900">Açık İlanları Keşfet</h3>
@@ -555,7 +555,7 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
                   return (
                     <div 
                       key={job.id} 
-                      className="group border border-slate-100 rounded-2xl p-5 hover:border-emerald-100 hover:shadow-sm hover:shadow-emerald-50/10 transition-all duration-200 bg-white"
+                      className="card group rounded-2xl p-5"
                     >
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                         <div>
@@ -586,7 +586,7 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
                           {/* Skill badges */}
                           <div className="flex flex-wrap gap-1 mt-3">
                             {job.skills.map((skill, idx) => (
-                              <span key={idx} className="inline-flex items-center rounded bg-slate-50 border border-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-500">
+                              <span key={idx} className="inline-flex items-center rounded-lg bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[9px] font-semibold text-emerald-700 shadow-sm">
                                 {skill}
                               </span>
                             ))}
@@ -647,7 +647,7 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
           {applications.map((app) => {
             const matchingJob = jobs.find(j => j.id === app.jobId);
             return (
-              <div key={app.id} className="bg-white rounded-2xl border border-slate-100 p-6 shadow-sm hover:shadow-md transition">
+              <div key={app.id} className="card rounded-2xl p-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">

@@ -217,7 +217,7 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 text-slate-800">
       
       {/* Employer Profile Card */}
-      <div className="mb-6 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
+      <div className="mb-6 panel rounded-3xl p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 font-bold text-lg">
@@ -242,7 +242,7 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-4 mb-8">
         
         {/* Stat 1 */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+        <div className="card-stat rounded-3xl p-6">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Aktif İlanlar</span>
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
@@ -256,7 +256,7 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
         </div>
 
         {/* Stat 2 */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+        <div className="card-stat rounded-3xl p-6">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Toplam Başvuru</span>
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
@@ -270,7 +270,7 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
         </div>
 
         {/* Stat 3 */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm bg-gradient-to-tr from-slate-50/20 to-transparent">
+        <div className="card-stat rounded-3xl p-6 bg-gradient-to-tr from-slate-50/20 to-transparent">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Yüksek AI Eşleşmeli</span>
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
@@ -284,7 +284,7 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
         </div>
 
         {/* Stat 4 */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+        <div className="card-stat rounded-3xl p-6">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Mülakat Aşaması</span>
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
@@ -303,7 +303,7 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
         
         {/* LEFT COLUMN: Manage Jobs */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+          <div className="panel rounded-3xl p-6">
             <div className="flex items-center justify-between mb-5">
               <h3 className="font-display text-base font-bold text-slate-900">İlan Yönetimi</h3>
               <button
@@ -426,7 +426,7 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
             {/* List of Posted Jobs */}
             <div className="space-y-3">
               {jobs.map((job) => (
-                <div key={job.id} className="p-4 rounded-2xl border border-slate-100 hover:border-slate-200 bg-white flex justify-between items-start transition-all duration-150">
+                <div key={job.id} className="card rounded-2xl p-4 flex justify-between items-start">
                   <div>
                     <h4 className="text-sm font-semibold text-slate-900">{job.title}</h4>
                     <p className="text-[11px] text-slate-400 mt-0.5">{job.location} &bull; {job.type}</p>
@@ -458,7 +458,7 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
         </div>
               {/* RIGHT COLUMN: Applicants & Applications Feed */}
         <div className="lg:col-span-7 space-y-6">
-          <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+          <div className="panel rounded-3xl p-6">
             <h3 className="font-display text-base font-bold text-slate-900 mb-5">Gelen Başvurular</h3>
 
             <div className="space-y-4">
@@ -474,7 +474,7 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
                   return (
                     <div 
                       key={app.id} 
-                      className="group border border-slate-100 rounded-2xl p-5 hover:border-emerald-100 hover:shadow-sm transition duration-150 bg-white"
+                      className="group border border-slate-200 rounded-2xl p-5 hover:border-emerald-200 hover:shadow-md transition duration-150 bg-white shadow-sm hover:-translate-y-0.5"
                     >
                       <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
                         
