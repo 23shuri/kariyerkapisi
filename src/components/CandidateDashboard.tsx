@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   FileText, Sparkles, MapPin, Award, User, Upload, Search, Briefcase, 
   ChevronRight, BadgeAlert, BadgeCheck, CheckCircle2, RefreshCw, Star, Info, CirclePercent, ArrowUpRight,
-  Building2, Clock, Layers, DollarSign, Users
+  Building2, Clock, Layers, DollarSign, Users, SlidersHorizontal, X
 } from 'lucide-react';
 import { User as UserType, Job, Application, MatchDetail } from '../types';
 
@@ -17,6 +17,11 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
   const [applications, setApplications] = useState<Application[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('All');
+  const [filterLocation, setFilterLocation] = useState<string>('All');
+  const [filterExperience, setFilterExperience] = useState<string>('All');
+  const [minSalary, setMinSalary] = useState<string>('');
+  const [maxSalary, setMaxSalary] = useState<string>('');
+  const [showFilters, setShowFilters] = useState(false);
   
   // Profile Editor / Parser States
   const [isParsing, setIsParsing] = useState(false);
@@ -272,14 +277,58 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
     }
   };
 
+  // Sabit şehir listesi
+  const locationOptions = [
+    'All',
+    'İstanbul', 'Ankara', 'İzmir', 'Bursa', 'Antalya', 'Adana', 'Konya',
+    'Gaziantep', 'Mersin', 'Kayseri', 'Eskişehir', 'Trabzon', 'Samsun',
+    'Diyarbakır', 'Denizli', 'Kocaeli', 'Sakarya', 'Balıkesir', 'Malatya', 'Manisa'
+  ];
+  const experienceOptions = ['All', ...Array.from(new Set(jobs.map(j => j.experienceLevel).filter(Boolean)))];
+
+  const activeFilterCount = [
+    filterType !== 'All',
+    filterLocation !== 'All',
+    filterExperience !== 'All',
+    minSalary !== '' || maxSalary !== '',
+  ].filter(Boolean).length;
+
+  const resetFilters = () => {
+    setFilterType('All');
+    setFilterLocation('All');
+    setFilterExperience('All');
+    setMinSalary('');
+    setMaxSalary('');
+    setSearchQuery('');
+  };
+
   // Filters
   const filteredJobs = jobs.filter(job => {
-    const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          job.skills.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesSearch = !searchQuery || 
+      job.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      job.skills.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    if (filterType === 'All') return matchesSearch;
-    return matchesSearch && job.type === filterType;
+    const matchesType = filterType === 'All' || job.type === filterType;
+    const matchesLocation = filterLocation === 'All' || job.location.includes(filterLocation);
+    const matchesExperience = filterExperience === 'All' || job.experienceLevel === filterExperience;
+
+    // Maaş filtresi — ilandaki sayısal değerleri çek
+    let matchesSalary = true;
+    if (minSalary !== '' || maxSalary !== '') {
+      const salaryNums = (job.salaryRange || '').replace(/\./g, '').match(/\d+/g);
+      if (salaryNums && salaryNums.length > 0) {
+        const jobMin = parseInt(salaryNums[0]);
+        const jobMax = salaryNums.length > 1 ? parseInt(salaryNums[salaryNums.length - 1]) : jobMin;
+        if (minSalary !== '' && jobMax < parseInt(minSalary)) matchesSalary = false;
+        if (maxSalary !== '' && jobMin > parseInt(maxSalary)) matchesSalary = false;
+      } else {
+        // Sayısal maaş yoksa (ör: "Rekabetçi") filtreye dahil et
+        matchesSalary = true;
+      }
+    }
+
+    return matchesSearch && matchesType && matchesLocation && matchesExperience && matchesSalary;
   });
 
   return (
@@ -359,28 +408,122 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
           
           {/* Job Feed header search */}
           <div className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
               <div>
                 <h3 className="font-display text-base font-bold text-slate-900">Açık İlanları Keşfet</h3>
-                <p className="text-xs text-slate-400 mt-1">Özgeçmişinize en uygun fırsatlar otomatik olarak ön plana çıkarılır.</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  {filteredJobs.length} ilan bulundu
+                  {activeFilterCount > 0 && <span className="text-emerald-600 font-semibold"> · {activeFilterCount} filtre aktif</span>}
+                </p>
               </div>
-              
-              {/* Type Filter */}
-              <div className="flex rounded-lg bg-slate-100/80 p-0.5 self-start sm:self-center">
-                {['All', 'Uzaktan', 'Hibrit', 'Ofisten'].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setFilterType(type)}
-                    className={`py-1 px-2.5 text-[10px] font-semibold rounded-md transition cursor-pointer ${filterType === type ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                  >
-                    {type === 'All' ? 'Tümü' : type}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2 self-start sm:self-center">
+                {/* Çalışma tipi hızlı filtresi */}
+                <div className="flex rounded-lg bg-slate-100/80 p-0.5">
+                  {['All', 'Uzaktan', 'Hibrit', 'Ofisten'].map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setFilterType(type)}
+                      className={`py-1 px-2.5 text-[10px] font-semibold rounded-md transition cursor-pointer ${filterType === type ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                      {type === 'All' ? 'Tümü' : type}
+                    </button>
+                  ))}
+                </div>
+                {/* Gelişmiş filtreler butonu */}
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`relative inline-flex items-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold border transition cursor-pointer ${showFilters ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  Filtrele
+                  {activeFilterCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 h-4 w-4 flex items-center justify-center rounded-full bg-emerald-500 text-white text-[9px] font-bold">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
               </div>
             </div>
 
+            {/* Gelişmiş filtre paneli */}
+            {showFilters && (
+              <div className="mb-4 p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-slate-700">Gelişmiş Filtreler</span>
+                  {activeFilterCount > 0 && (
+                    <button onClick={resetFilters} className="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-1 cursor-pointer">
+                      <X className="h-3 w-3" /> Filtreleri Temizle
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Konum */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
+                      <MapPin className="h-3 w-3 inline mr-1" />Şehir
+                    </label>
+                    <select
+                      value={filterLocation}
+                      onChange={(e) => setFilterLocation(e.target.value)}
+                      className="w-full rounded-lg border border-slate-200 bg-white py-1.5 px-2.5 text-xs text-slate-700 outline-none focus:border-emerald-500 transition cursor-pointer"
+                    >
+                      {locationOptions.map(opt => (
+                        <option key={opt} value={opt}>{opt === 'All' ? 'Tüm Şehirler' : opt}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* Deneyim */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
+                      <Clock className="h-3 w-3 inline mr-1" />Deneyim
+                    </label>
+                    <select
+                      value={filterExperience}
+                      onChange={(e) => setFilterExperience(e.target.value)}
+                      className="w-full rounded-lg border border-slate-200 bg-white py-1.5 px-2.5 text-xs text-slate-700 outline-none focus:border-emerald-500 transition cursor-pointer"
+                    >
+                      {experienceOptions.map(opt => (
+                        <option key={opt} value={opt}>{opt === 'All' ? 'Tüm Seviyeler' : opt}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* Maaş */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
+                      <DollarSign className="h-3 w-3 inline mr-1" />Maaş Aralığı (₺)
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        value={minSalary}
+                        onChange={(e) => setMinSalary(e.target.value)}
+                        placeholder="Min"
+                        className="w-full rounded-lg border border-slate-200 bg-white py-1.5 px-2.5 text-xs text-slate-700 outline-none focus:border-emerald-500 transition"
+                      />
+                      <span className="text-slate-400 text-xs font-bold shrink-0">—</span>
+                      <input
+                        type="number"
+                        value={maxSalary}
+                        onChange={(e) => setMaxSalary(e.target.value)}
+                        placeholder="Max"
+                        className="w-full rounded-lg border border-slate-200 bg-white py-1.5 px-2.5 text-xs text-slate-700 outline-none focus:border-emerald-500 transition"
+                      />
+                    </div>
+                    {(minSalary || maxSalary) && (
+                      <button
+                        onClick={() => { setMinSalary(''); setMaxSalary(''); }}
+                        className="text-[10px] text-red-400 hover:text-red-600 mt-1 cursor-pointer"
+                      >
+                        Temizle
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Search Input */}
-            <div className="relative mb-6">
+            <div className="relative mb-4">
               <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
                 <Search className="h-4 w-4" />
               </span>
@@ -389,8 +532,13 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Pozisyon, şirket veya yetenek arayın..."
-                className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 pl-9 pr-4 text-xs text-slate-900 focus:border-emerald-500 focus:bg-white outline-none transition-all"
+                className="block w-full rounded-xl border border-slate-200 bg-slate-50/50 py-2.5 pl-9 pr-10 text-xs text-slate-900 focus:border-emerald-500 focus:bg-white outline-none transition-all"
               />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
 
             {/* Job Cards */}
