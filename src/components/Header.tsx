@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Briefcase, LogOut, User as UserIcon, Building, Sparkles, Bell } from 'lucide-react';
+import { Briefcase, LogOut, User as UserIcon, Building, Sparkles, Bell, Users } from 'lucide-react';
 import { User } from '../types';
 
 interface HeaderProps {
