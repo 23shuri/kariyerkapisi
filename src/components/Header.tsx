@@ -10,6 +10,8 @@ interface HeaderProps {
   unreadCount?: number;
   activeTab?: 'home' | 'applications';
   onTabChange?: (tab: 'home' | 'applications') => void;
+  activeMainView?: 'dashboard' | 'network';
+  onMainViewChange?: (view: 'dashboard' | 'network') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ 
@@ -19,7 +21,9 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenNotifications, 
   unreadCount = 0,
   activeTab = 'home',
-  onTabChange
+  onTabChange,
+  activeMainView = 'dashboard',
+  onMainViewChange
 }) => {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md">
@@ -42,12 +46,15 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Navigation Tabs - Only for logged in candidates */}
-          {currentUser && currentUser.role === 'candidate' && onTabChange && (
+          {currentUser && currentUser.role === 'candidate' && onTabChange && onMainViewChange && (
             <nav className="hidden md:flex items-center space-x-1">
               <button
-                onClick={() => onTabChange('home')}
+                onClick={() => {
+                  onMainViewChange('dashboard');
+                  onTabChange('home');
+                }}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
-                  activeTab === 'home'
+                  activeMainView === 'dashboard'
                     ? 'bg-emerald-50 text-emerald-700'
                     : 'text-slate-600 hover:text-emerald-600 hover:bg-slate-50'
                 }`}
@@ -55,14 +62,28 @@ export const Header: React.FC<HeaderProps> = ({
                 Ana Ekran
               </button>
               <button
-                onClick={() => onTabChange('applications')}
+                onClick={() => {
+                  onMainViewChange('dashboard');
+                  onTabChange('applications');
+                }}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
-                  activeTab === 'applications'
+                  activeMainView === 'dashboard' && activeTab === 'applications'
                     ? 'bg-emerald-50 text-emerald-700'
                     : 'text-slate-600 hover:text-emerald-600 hover:bg-slate-50'
                 }`}
               >
                 Mevcut Başvurular
+              </button>
+              <button
+                onClick={() => onMainViewChange('network')}
+                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
+                  activeMainView === 'network'
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-slate-600 hover:text-blue-600 hover:bg-slate-50'
+                }`}
+              >
+                <Users className="h-4 w-4 inline mr-1" />
+                Network
               </button>
             </nav>
           )}

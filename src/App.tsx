@@ -5,6 +5,7 @@ import { AuthModal } from './components/AuthModal';
 import { CandidateDashboard } from './components/CandidateDashboard';
 import { EmployerDashboard } from './components/EmployerDashboard';
 import { AdminDashboard } from './components/AdminDashboard';
+import { NetworkDashboard } from './components/NetworkDashboard';
 import { NotificationPanel } from './components/NotificationPanel';
 import { User, Role, Notification } from './types';
 
@@ -16,6 +17,7 @@ export default function App() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [activeTab, setActiveTab] = useState<'home' | 'applications'>('home');
+  const [activeMainView, setActiveMainView] = useState<'dashboard' | 'network'>('dashboard');
 
   // Load user session on startup
   useEffect(() => {
@@ -115,6 +117,8 @@ export default function App() {
         unreadCount={unreadCount}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        activeMainView={activeMainView}
+        onMainViewChange={setActiveMainView}
       />
 
       {/* Main Content Area */}
@@ -122,6 +126,8 @@ export default function App() {
         {currentUser ? (
           currentUser.role === 'admin' ? (
             <AdminDashboard currentUser={currentUser} />
+          ) : activeMainView === 'network' ? (
+            <NetworkDashboard currentUser={currentUser} />
           ) : currentUser.role === 'candidate' ? (
             <CandidateDashboard 
               currentUser={currentUser} 

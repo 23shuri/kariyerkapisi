@@ -191,6 +191,118 @@ class NotificationModel(db.Model):
             'relatedCompany': self.related_company
         }
 
+class ConnectionModel(db.Model):
+    __tablename__ = 'connections'
+
+    id = db.Column(db.String(64), primary_key=True)
+    user_id = db.Column(db.String(64), nullable=False)  # Person who initiated
+    connected_user_id = db.Column(db.String(64), nullable=False)  # Person they're connected to
+    status = db.Column(db.String(32), default='active')  # 'active', 'blocked'
+    created_at = db.Column(db.String(64), nullable=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'userId': self.user_id,
+            'connectedUserId': self.connected_user_id,
+            'status': self.status,
+            'createdAt': self.created_at
+        }
+
+class ConnectionRequestModel(db.Model):
+    __tablename__ = 'connection_requests'
+
+    id = db.Column(db.String(64), primary_key=True)
+    from_user_id = db.Column(db.String(64), nullable=False)
+    to_user_id = db.Column(db.String(64), nullable=False)
+    message = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(32), default='pending')  # 'pending', 'accepted', 'rejected'
+    created_at = db.Column(db.String(64), nullable=False)
+    updated_at = db.Column(db.String(64), nullable=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'fromUserId': self.from_user_id,
+            'toUserId': self.to_user_id,
+            'message': self.message,
+            'status': self.status,
+            'createdAt': self.created_at,
+            'updatedAt': self.updated_at
+        }
+
+class MessageModel(db.Model):
+    __tablename__ = 'messages'
+
+    id = db.Column(db.String(64), primary_key=True)
+    from_user_id = db.Column(db.String(64), nullable=False)
+    to_user_id = db.Column(db.String(64), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.String(64), nullable=False)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'fromUserId': self.from_user_id,
+            'toUserId': self.to_user_id,
+            'content': self.content,
+            'isRead': self.is_read,
+            'createdAt': self.created_at
+        }
+
+class NetworkScoreModel(db.Model):
+    __tablename__ = 'network_scores'
+
+    user_id = db.Column(db.String(64), primary_key=True)
+    total_score = db.Column(db.Integer, default=0)
+    profile_completion_score = db.Column(db.Integer, default=0)
+    connections_score = db.Column(db.Integer, default=0)
+    engagement_score = db.Column(db.Integer, default=0)
+    total_connections = db.Column(db.Integer, default=0)
+    total_messages_sent = db.Column(db.Integer, default=0)
+    total_messages_received = db.Column(db.Integer, default=0)
+    last_updated = db.Column(db.String(64), nullable=False)
+
+    def to_dict(self):
+        return {
+            'userId': self.user_id,
+            'totalScore': self.total_score,
+            'profileCompletionScore': self.profile_completion_score,
+            'connectionsScore': self.connections_score,
+            'engagementScore': self.engagement_score,
+            'totalConnections': self.total_connections,
+            'totalMessagesSent': self.total_messages_sent,
+            'totalMessagesReceived': self.total_messages_received,
+            'lastUpdated': self.last_updated
+        }
+
+class UserProfileExtendedModel(db.Model):
+    __tablename__ = 'user_profiles_extended'
+
+    user_id = db.Column(db.String(64), primary_key=True)
+    university = db.Column(db.String(256), nullable=True)
+    department = db.Column(db.String(256), nullable=True)
+    company = db.Column(db.String(256), nullable=True)
+    sector = db.Column(db.String(128), nullable=True)
+    bio = db.Column(db.Text, nullable=True)
+    linkedin_url = db.Column(db.String(256), nullable=True)
+    github_url = db.Column(db.String(256), nullable=True)
+    portfolio_url = db.Column(db.String(256), nullable=True)
+
+    def to_dict(self):
+        return {
+            'userId': self.user_id,
+            'university': self.university,
+            'department': self.department,
+            'company': self.company,
+            'sector': self.sector,
+            'bio': self.bio,
+            'linkedinUrl': self.linkedin_url,
+            'githubUrl': self.github_url,
+            'portfolioUrl': self.portfolio_url
+        }
+
 # --- Gemini Client Helper ---
 def get_gemini_client():
     api_key = os.getenv('GEMINI_API_KEY')
@@ -1061,6 +1173,570 @@ def application_decision(app_id):
         'application': app_obj.to_dict(),
         'notification': notification.to_dict()
     })
+
+# ============================================
+# NETWORK MODULE ENDPOINTS
+# ============================================
+
+# 18. Network: Get AI-Powered Connection Suggestions
+@app.route('/api/network/suggestions', methods=['GET'])
+def get_network_suggestions():
+    user_id = request.args.get('userId')
+    if not user_id:
+        return jsonify({'error': 'userId gereklidir.'}), 400
+    
+    current_user = UserModel.query.get(user_id)
+    if not current_user:
+        return jsonify({'error': 'Kullanıcı bulunamadı.'}), 404
+    
+    # Get current user's extended profile
+    current_profile = UserProfileExtendedModel.query.get(user_id)
+    current_skills = json.loads(current_user.skills_json) if current_user.skills_json else []
+    
+    # Get existing connections
+    existing_connections = ConnectionModel.query.filter(
+        (ConnectionModel.user_id == user_id) | (ConnectionModel.connected_user_id == user_id)
+    ).all()
+    connected_ids = set()
+    for conn in existing_connections:
+        connected_ids.add(conn.user_id if conn.user_id != user_id else conn.connected_user_id)
+    
+    # Get pending requests
+    pending_requests = ConnectionRequestModel.query.filter(
+        ((ConnectionRequestModel.from_user_id == user_id) | (ConnectionRequestModel.to_user_id == user_id)) &
+        (ConnectionRequestModel.status == 'pending')
+    ).all()
+    for req in pending_requests:
+        connected_ids.add(req.from_user_id if req.from_user_id != user_id else req.to_user_id)
+    
+    # Exclude self
+    connected_ids.add(user_id)
+    
+    # Get all other users
+    all_users = UserModel.query.filter(UserModel.id.notin_(connected_ids)).all()
+    
+    suggestions = []
+    for user in all_users:
+        user_profile = UserProfileExtendedModel.query.get(user.id)
+        user_skills = json.loads(user.skills_json) if user.skills_json else []
+        
+        # Calculate match reasons
+        reasons = []
+        match_score = 0
+        
+        # Common skills
+        common_skills = set(current_skills) & set(user_skills)
+        if common_skills:
+            reasons.append(f"Ortak yetenekler: {', '.join(list(common_skills)[:3])}")
+            match_score += len(common_skills) * 10
+        
+        # Same location
+        if current_user.location and user.location and current_user.location.lower() == user.location.lower():
+            reasons.append(f"Aynı şehir: {user.location}")
+            match_score += 15
+        
+        # Same university
+        if current_profile and user_profile:
+            if current_profile.university and user_profile.university and \
+               current_profile.university.lower() == user_profile.university.lower():
+                reasons.append(f"Aynı üniversite: {user_profile.university}")
+                match_score += 20
+            
+            # Same department
+            if current_profile.department and user_profile.department and \
+               current_profile.department.lower() == user_profile.department.lower():
+                reasons.append(f"Aynı bölüm: {user_profile.department}")
+                match_score += 15
+            
+            # Same company
+            if current_profile.company and user_profile.company and \
+               current_profile.company.lower() == user_profile.company.lower():
+                reasons.append(f"Aynı şirket: {user_profile.company}")
+                match_score += 25
+            
+            # Same sector
+            if current_profile.sector and user_profile.sector and \
+               current_profile.sector.lower() == user_profile.sector.lower():
+                reasons.append(f"Aynı sektör: {user_profile.sector}")
+                match_score += 10
+        
+        # Similar experience level (±2 years)
+        if abs(current_user.experience_years - user.experience_years) <= 2:
+            reasons.append(f"Benzer deneyim seviyesi: ~{user.experience_years} yıl")
+            match_score += 10
+        
+        # Applied to similar jobs
+        current_apps = ApplicationModel.query.filter_by(candidate_id=user_id).all()
+        user_apps = ApplicationModel.query.filter_by(candidate_id=user.id).all()
+        current_job_ids = {app.job_id for app in current_apps}
+        user_job_ids = {app.job_id for app in user_apps}
+        common_jobs = current_job_ids & user_job_ids
+        if common_jobs:
+            reasons.append(f"Benzer işlere başvuru: {len(common_jobs)} ortak ilan")
+            match_score += len(common_jobs) * 5
+        
+        # Mutual connections
+        user_connections = ConnectionModel.query.filter(
+            (ConnectionModel.user_id == user.id) | (ConnectionModel.connected_user_id == user.id)
+        ).all()
+        mutual_count = 0
+        for conn in user_connections:
+            other_id = conn.user_id if conn.user_id != user.id else conn.connected_user_id
+            if other_id in [c.user_id if c.user_id != user_id else c.connected_user_id for c in existing_connections]:
+                mutual_count += 1
+        if mutual_count > 0:
+            reasons.append(f"{mutual_count} ortak bağlantı")
+            match_score += mutual_count * 8
+        
+        if reasons:  # Only suggest if there's at least one reason
+            suggestions.append({
+                'user': user.to_dict(),
+                'matchScore': min(match_score, 100),
+                'reasons': reasons,
+                'mutualConnections': mutual_count,
+                'extendedProfile': user_profile.to_dict() if user_profile else None
+            })
+    
+    # Sort by match score
+    suggestions.sort(key=lambda x: x['matchScore'], reverse=True)
+    
+    return jsonify({'suggestions': suggestions[:20]})  # Top 20 suggestions
+
+# 19. Network: Send Connection Request
+@app.route('/api/network/connections/request', methods=['POST'])
+def send_connection_request():
+    data = request.get_json() or {}
+    from_user_id = data.get('fromUserId')
+    to_user_id = data.get('toUserId')
+    message = data.get('message', '')
+    
+    if not from_user_id or not to_user_id:
+        return jsonify({'error': 'fromUserId ve toUserId gereklidir.'}), 400
+    
+    # Check if request already exists
+    existing = ConnectionRequestModel.query.filter_by(
+        from_user_id=from_user_id, to_user_id=to_user_id, status='pending'
+    ).first()
+    if existing:
+        return jsonify({'error': 'Zaten beklemede bir istek var.'}), 400
+    
+    # Check if already connected
+    existing_conn = ConnectionModel.query.filter(
+        ((ConnectionModel.user_id == from_user_id) & (ConnectionModel.connected_user_id == to_user_id)) |
+        ((ConnectionModel.user_id == to_user_id) & (ConnectionModel.connected_user_id == from_user_id))
+    ).first()
+    if existing_conn:
+        return jsonify({'error': 'Zaten bağlantısınız.'}), 400
+    
+    new_request = ConnectionRequestModel(
+        id=f"connreq_{int(time.time() * 1000)}",
+        from_user_id=from_user_id,
+        to_user_id=to_user_id,
+        message=message,
+        status='pending',
+        created_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    )
+    db.session.add(new_request)
+    
+    # Create notification for recipient
+    from_user = UserModel.query.get(from_user_id)
+    notif = NotificationModel(
+        id=f"notif_{int(time.time() * 1000)}",
+        user_id=to_user_id,
+        title='Yeni Bağlantı İsteği',
+        message=f"{from_user.full_name} size bağlantı isteği gönderdi.",
+        type='info',
+        created_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    )
+    db.session.add(notif)
+    db.session.commit()
+    
+    return jsonify({'request': new_request.to_dict()}), 201
+
+# 20. Network: Respond to Connection Request
+@app.route('/api/network/connections/request/<request_id>', methods=['PATCH'])
+def respond_to_connection_request(request_id):
+    data = request.get_json() or {}
+    action = data.get('action')  # 'accept' or 'reject'
+    
+    if action not in ['accept', 'reject']:
+        return jsonify({'error': 'action: accept veya reject olmalıdır.'}), 400
+    
+    conn_request = ConnectionRequestModel.query.get(request_id)
+    if not conn_request:
+        return jsonify({'error': 'İstek bulunamadı.'}), 404
+    
+    if conn_request.status != 'pending':
+        return jsonify({'error': 'İstek zaten işlendi.'}), 400
+    
+    conn_request.status = 'accepted' if action == 'accept' else 'rejected'
+    conn_request.updated_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    if action == 'accept':
+        # Create bidirectional connection
+        new_connection = ConnectionModel(
+            id=f"conn_{int(time.time() * 1000)}",
+            user_id=conn_request.from_user_id,
+            connected_user_id=conn_request.to_user_id,
+            status='active',
+            created_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        )
+        db.session.add(new_connection)
+        
+        # Update network scores
+        for uid in [conn_request.from_user_id, conn_request.to_user_id]:
+            score = NetworkScoreModel.query.get(uid)
+            if not score:
+                score = NetworkScoreModel(
+                    user_id=uid,
+                    total_connections=0,
+                    last_updated=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                )
+                db.session.add(score)
+            score.total_connections += 1
+            calculate_network_score(uid)
+        
+        # Notify requester
+        to_user = UserModel.query.get(conn_request.to_user_id)
+        notif = NotificationModel(
+            id=f"notif_{int(time.time() * 1000)}",
+            user_id=conn_request.from_user_id,
+            title='Bağlantı İsteği Kabul Edildi',
+            message=f"{to_user.full_name} bağlantı isteğinizi kabul etti!",
+            type='success',
+            created_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        )
+        db.session.add(notif)
+    
+    db.session.commit()
+    return jsonify({'request': conn_request.to_dict()})
+
+# 21. Network: Get User Connections
+@app.route('/api/network/connections', methods=['GET'])
+def get_connections():
+    user_id = request.args.get('userId')
+    if not user_id:
+        return jsonify({'error': 'userId gereklidir.'}), 400
+    
+    connections = ConnectionModel.query.filter(
+        (ConnectionModel.user_id == user_id) | (ConnectionModel.connected_user_id == user_id)
+    ).all()
+    
+    connection_list = []
+    for conn in connections:
+        connected_id = conn.user_id if conn.user_id != user_id else conn.connected_user_id
+        connected_user = UserModel.query.get(connected_id)
+        if connected_user:
+            extended_profile = UserProfileExtendedModel.query.get(connected_id)
+            connection_list.append({
+                'connection': conn.to_dict(),
+                'user': connected_user.to_dict(),
+                'extendedProfile': extended_profile.to_dict() if extended_profile else None
+            })
+    
+    return jsonify({'connections': connection_list})
+
+# 22. Network: Get Pending Connection Requests
+@app.route('/api/network/connections/requests', methods=['GET'])
+def get_connection_requests():
+    user_id = request.args.get('userId')
+    if not user_id:
+        return jsonify({'error': 'userId gereklidir.'}), 400
+    
+    # Incoming requests
+    incoming = ConnectionRequestModel.query.filter_by(
+        to_user_id=user_id, status='pending'
+    ).all()
+    
+    # Outgoing requests
+    outgoing = ConnectionRequestModel.query.filter_by(
+        from_user_id=user_id, status='pending'
+    ).all()
+    
+    incoming_list = []
+    for req in incoming:
+        from_user = UserModel.query.get(req.from_user_id)
+        if from_user:
+            incoming_list.append({
+                'request': req.to_dict(),
+                'fromUser': from_user.to_dict()
+            })
+    
+    outgoing_list = []
+    for req in outgoing:
+        to_user = UserModel.query.get(req.to_user_id)
+        if to_user:
+            outgoing_list.append({
+                'request': req.to_dict(),
+                'toUser': to_user.to_dict()
+            })
+    
+    return jsonify({
+        'incoming': incoming_list,
+        'outgoing': outgoing_list
+    })
+
+# 23. Network: Send Message
+@app.route('/api/network/messages', methods=['POST'])
+def send_message():
+    data = request.get_json() or {}
+    from_user_id = data.get('fromUserId')
+    to_user_id = data.get('toUserId')
+    content = data.get('content')
+    
+    if not from_user_id or not to_user_id or not content:
+        return jsonify({'error': 'fromUserId, toUserId ve content gereklidir.'}), 400
+    
+    # Check if users are connected
+    connection = ConnectionModel.query.filter(
+        ((ConnectionModel.user_id == from_user_id) & (ConnectionModel.connected_user_id == to_user_id)) |
+        ((ConnectionModel.user_id == to_user_id) & (ConnectionModel.connected_user_id == from_user_id))
+    ).first()
+    
+    if not connection:
+        return jsonify({'error': 'Sadece bağlantılarınıza mesaj gönderebilirsiniz.'}), 403
+    
+    new_message = MessageModel(
+        id=f"msg_{int(time.time() * 1000)}",
+        from_user_id=from_user_id,
+        to_user_id=to_user_id,
+        content=content,
+        is_read=False,
+        created_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    )
+    db.session.add(new_message)
+    
+    # Update network scores
+    score = NetworkScoreModel.query.get(from_user_id)
+    if score:
+        score.total_messages_sent += 1
+        calculate_network_score(from_user_id)
+    
+    recipient_score = NetworkScoreModel.query.get(to_user_id)
+    if recipient_score:
+        recipient_score.total_messages_received += 1
+        calculate_network_score(to_user_id)
+    
+    # Create notification
+    from_user = UserModel.query.get(from_user_id)
+    notif = NotificationModel(
+        id=f"notif_{int(time.time() * 1000)}",
+        user_id=to_user_id,
+        title='Yeni Mesaj',
+        message=f"{from_user.full_name} size mesaj gönderdi.",
+        type='info',
+        created_at=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    )
+    db.session.add(notif)
+    
+    db.session.commit()
+    return jsonify({'message': new_message.to_dict()}), 201
+
+# 24. Network: Get Conversations
+@app.route('/api/network/messages/conversations', methods=['GET'])
+def get_conversations():
+    user_id = request.args.get('userId')
+    if not user_id:
+        return jsonify({'error': 'userId gereklidir.'}), 400
+    
+    # Get all messages where user is sender or receiver
+    messages = MessageModel.query.filter(
+        (MessageModel.from_user_id == user_id) | (MessageModel.to_user_id == user_id)
+    ).order_by(MessageModel.created_at.desc()).all()
+    
+    # Group by conversation partner
+    conversations = {}
+    for msg in messages:
+        partner_id = msg.to_user_id if msg.from_user_id == user_id else msg.from_user_id
+        if partner_id not in conversations:
+            partner = UserModel.query.get(partner_id)
+            if partner:
+                conversations[partner_id] = {
+                    'partnerId': partner_id,
+                    'partnerName': partner.full_name,
+                    'partnerAvatar': partner.avatar_url,
+                    'partnerTitle': partner.title,
+                    'lastMessage': msg.content,
+                    'lastMessageTime': msg.created_at,
+                    'isLastMessageFromMe': msg.from_user_id == user_id,
+                    'unreadCount': 0
+                }
+        
+        # Count unread messages
+        if msg.to_user_id == user_id and not msg.is_read:
+            conversations[partner_id]['unreadCount'] += 1
+    
+    return jsonify({'conversations': list(conversations.values())})
+
+# 25. Network: Get Messages with User
+@app.route('/api/network/messages/<other_user_id>', methods=['GET'])
+def get_messages_with_user(other_user_id):
+    user_id = request.args.get('userId')
+    if not user_id:
+        return jsonify({'error': 'userId gereklidir.'}), 400
+    
+    messages = MessageModel.query.filter(
+        ((MessageModel.from_user_id == user_id) & (MessageModel.to_user_id == other_user_id)) |
+        ((MessageModel.from_user_id == other_user_id) & (MessageModel.to_user_id == user_id))
+    ).order_by(MessageModel.created_at.asc()).all()
+    
+    # Mark messages as read
+    for msg in messages:
+        if msg.to_user_id == user_id and not msg.is_read:
+            msg.is_read = True
+    db.session.commit()
+    
+    return jsonify({'messages': [msg.to_dict() for msg in messages]})
+
+# 26. Network: Get Network Score
+@app.route('/api/network/score', methods=['GET'])
+def get_network_score():
+    user_id = request.args.get('userId')
+    if not user_id:
+        return jsonify({'error': 'userId gereklidir.'}), 400
+    
+    score = NetworkScoreModel.query.get(user_id)
+    if not score:
+        # Create initial score
+        score = NetworkScoreModel(
+            user_id=user_id,
+            total_connections=0,
+            last_updated=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        )
+        db.session.add(score)
+        db.session.commit()
+        calculate_network_score(user_id)
+        score = NetworkScoreModel.query.get(user_id)
+    
+    return jsonify({'score': score.to_dict()})
+
+# 27. Network: Update Extended Profile
+@app.route('/api/network/profile/extended', methods=['PATCH'])
+def update_extended_profile():
+    data = request.get_json() or {}
+    user_id = data.get('userId')
+    
+    if not user_id:
+        return jsonify({'error': 'userId gereklidir.'}), 400
+    
+    profile = UserProfileExtendedModel.query.get(user_id)
+    if not profile:
+        profile = UserProfileExtendedModel(user_id=user_id)
+        db.session.add(profile)
+    
+    if 'university' in data:
+        profile.university = data['university']
+    if 'department' in data:
+        profile.department = data['department']
+    if 'company' in data:
+        profile.company = data['company']
+    if 'sector' in data:
+        profile.sector = data['sector']
+    if 'bio' in data:
+        profile.bio = data['bio']
+    if 'linkedinUrl' in data:
+        profile.linkedin_url = data['linkedinUrl']
+    if 'githubUrl' in data:
+        profile.github_url = data['githubUrl']
+    if 'portfolioUrl' in data:
+        profile.portfolio_url = data['portfolioUrl']
+    
+    db.session.commit()
+    
+    # Recalculate network score
+    calculate_network_score(user_id)
+    
+    return jsonify({'profile': profile.to_dict()})
+
+# 28. Network: Get Company Employees
+@app.route('/api/network/companies/<company_name>/employees', methods=['GET'])
+def get_company_employees(company_name):
+    city_filter = request.args.get('city')
+    university_filter = request.args.get('university')
+    role_filter = request.args.get('role')
+    experience_filter = request.args.get('experience')
+    
+    # Get all profiles with this company
+    profiles = UserProfileExtendedModel.query.filter_by(company=company_name).all()
+    
+    employees = []
+    for profile in profiles:
+        user = UserModel.query.get(profile.user_id)
+        if user:
+            # Apply filters
+            if city_filter and user.location and city_filter.lower() not in user.location.lower():
+                continue
+            if university_filter and profile.university and university_filter.lower() not in profile.university.lower():
+                continue
+            if role_filter and user.title and role_filter.lower() not in user.title.lower():
+                continue
+            if experience_filter:
+                try:
+                    exp_years = int(experience_filter)
+                    if abs(user.experience_years - exp_years) > 2:
+                        continue
+                except:
+                    pass
+            
+            employees.append({
+                'user': user.to_dict(),
+                'extendedProfile': profile.to_dict()
+            })
+    
+    return jsonify({
+        'company': company_name,
+        'employeeCount': len(employees),
+        'employees': employees
+    })
+
+# Helper: Calculate Network Score
+def calculate_network_score(user_id):
+    user = UserModel.query.get(user_id)
+    if not user:
+        return
+    
+    score_model = NetworkScoreModel.query.get(user_id)
+    if not score_model:
+        score_model = NetworkScoreModel(
+            user_id=user_id,
+            last_updated=datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        )
+        db.session.add(score_model)
+    
+    # Profile completion (0-40 points)
+    profile_score = user.profile_strength or 20
+    profile_score = int((profile_score / 100) * 40)
+    
+    # Extended profile bonus
+    extended = UserProfileExtendedModel.query.get(user_id)
+    if extended:
+        if extended.university:
+            profile_score += 5
+        if extended.company:
+            profile_score += 5
+        if extended.bio:
+            profile_score += 5
+        if extended.linkedin_url or extended.github_url or extended.portfolio_url:
+            profile_score += 5
+    
+    profile_score = min(profile_score, 50)
+    
+    # Connections (0-30 points)
+    connection_count = score_model.total_connections
+    connections_score = min(connection_count * 2, 30)
+    
+    # Engagement (0-20 points)
+    total_messages = score_model.total_messages_sent + score_model.total_messages_received
+    engagement_score = min(total_messages, 20)
+    
+    # Update scores
+    score_model.profile_completion_score = profile_score
+    score_model.connections_score = connections_score
+    score_model.engagement_score = engagement_score
+    score_model.total_score = profile_score + connections_score + engagement_score
+    score_model.last_updated = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    db.session.commit()
 
 # ==================== ADMIN ENDPOINTS ====================
 
