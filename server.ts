@@ -511,7 +511,8 @@ app.post('/api/parse-cv', async (req, res) => {
 // 11. Profile Update Endpoint (Candidate)
 app.patch('/api/profile/:userId', (req, res) => {
   const { userId } = req.params;
-  const { fullName, title, experienceYears, skills, location, resumeText, resumeFileName, profileStrength } = req.body;
+  const { fullName, title, experienceYears, skills, location, resumeText, resumeFileName, profileStrength, avatarUrl,
+          companyName, companySize, companySector, companyDescription, companyWebsite, companyCity } = req.body;
 
   const userIndex = users.findIndex((u) => u.id === userId);
   if (userIndex === -1) {
@@ -528,6 +529,13 @@ app.patch('/api/profile/:userId', (req, res) => {
     resumeText: resumeText || users[userIndex].resumeText,
     resumeFileName: resumeFileName || users[userIndex].resumeFileName,
     profileStrength: profileStrength !== undefined ? Number(profileStrength) : users[userIndex].profileStrength,
+    avatarUrl: avatarUrl !== undefined ? avatarUrl : users[userIndex].avatarUrl,
+    companyName: companyName !== undefined ? companyName : (users[userIndex] as any).companyName,
+    companySize: companySize !== undefined ? companySize : (users[userIndex] as any).companySize,
+    companySector: companySector !== undefined ? companySector : (users[userIndex] as any).companySector,
+    companyDescription: companyDescription !== undefined ? companyDescription : (users[userIndex] as any).companyDescription,
+    companyWebsite: companyWebsite !== undefined ? companyWebsite : (users[userIndex] as any).companyWebsite,
+    companyCity: companyCity !== undefined ? companyCity : (users[userIndex] as any).companyCity,
   };
 
   users[userIndex] = updatedUser;

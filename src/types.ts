@@ -13,6 +13,13 @@ export interface User {
   resumeFileName?: string;
   profileStrength?: number;
   avatarUrl?: string;
+  // İşveren alanları
+  companyName?: string;
+  companySize?: string;
+  companySector?: string;
+  companyDescription?: string;
+  companyWebsite?: string;
+  companyCity?: string;
 }
 
 export interface Job {
