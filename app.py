@@ -621,6 +621,8 @@ def get_jobs():
 @app.route('/api/jobs', methods=['POST'])
 def create_job():
     data = request.get_json() or {}
+    print(f"[DEBUG] Received job data: {data}")
+    
     title = data.get('title')
     company = data.get('company')
     location = data.get('location')
@@ -628,6 +630,7 @@ def create_job():
     description = data.get('description')
 
     if not title or not company or not location or not description:
+        print(f"[DEBUG] Missing fields: title={bool(title)}, company={bool(company)}, location={bool(location)}, description={bool(description)}")
         return jsonify({'error': 'Gerekli ilan detayları eksik. Lütfen şirket adını da dahil edin.'}), 400
 
     new_job = JobModel(
@@ -644,6 +647,7 @@ def create_job():
     )
     db.session.add(new_job)
     db.session.commit()
+    print(f"[DEBUG] Job created successfully: {new_job.id}")
 
     return jsonify({'job': new_job.to_dict()}), 201
 

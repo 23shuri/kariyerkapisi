@@ -5,6 +5,7 @@ import {
   Building2, Clock, Layers, DollarSign, Users, SlidersHorizontal, X
 } from 'lucide-react';
 import { User as UserType, Job, Application, MatchDetail } from '../types';
+import { ProfileWizard } from './ProfileWizard';
 
 interface CandidateDashboardProps {
   currentUser: UserType;
@@ -38,6 +39,7 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
   // Profile modal states
   const [showProfileViewModal, setShowProfileViewModal] = useState(false);
   const [showProfileEditModal, setShowProfileEditModal] = useState(false);
+  const [showProfileWizard, setShowProfileWizard] = useState(false);
   
   // Selected Match/Job details for modal
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
@@ -364,18 +366,18 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
             {/* Profile Action Buttons */}
             <div className="flex gap-2 mb-4">
               <button
-                onClick={() => setShowProfileViewModal(true)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2 px-3 rounded-lg transition cursor-pointer"
+                onClick={() => setShowProfileWizard(true)}
+                className="flex-1 inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2 px-3 rounded-lg transition cursor-pointer"
               >
-                <User className="h-3.5 w-3.5" />
-                Profili Görüntüle
+                <Sparkles className="h-3.5 w-3.5" />
+                Profili Tamamla
               </button>
               <button
                 onClick={() => setShowProfileEditModal(true)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2 px-3 rounded-lg transition cursor-pointer"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2 px-3 rounded-lg transition cursor-pointer"
               >
                 <Award className="h-3.5 w-3.5" />
-                Profili Düzenle
+                Hızlı Düzenle
               </button>
             </div>
 
@@ -1312,6 +1314,18 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
 
           </div>
         </div>
+      )}
+
+      {/* Profile Wizard Modal */}
+      {showProfileWizard && (
+        <ProfileWizard
+          currentUser={currentUser}
+          onComplete={(updatedUser) => {
+            onProfileUpdated(updatedUser);
+            setShowProfileWizard(false);
+          }}
+          onClose={() => setShowProfileWizard(false)}
+        />
       )}
 
     </div>

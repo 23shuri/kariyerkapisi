@@ -53,12 +53,9 @@ export const ProfileMenu: React.FC<ProfileMenuProps> = ({
           </div>
         )}
 
-        {/* Name & Role */}
+        {/* Name only - no role label */}
         <div className="hidden md:flex flex-col items-start">
           <span className="text-sm font-semibold text-slate-900">{currentUser.fullName}</span>
-          <span className="text-xs text-slate-500">
-            {currentUser.role === 'candidate' ? 'Aday' : currentUser.role === 'employer' ? 'İş Veren' : 'Admin'}
-          </span>
         </div>
 
         {/* Chevron */}

@@ -110,8 +110,10 @@ app.get('/api/jobs', (req, res) => {
 
 // 4. Jobs Endpoint: Create job (Employer)
 app.post('/api/jobs', (req, res) => {
+  console.log('[Jobs] Received data:', req.body);
   const { title, company, location, type, skills, experienceLevel, description, salaryRange } = req.body;
   if (!title || !company || !location || !type || !description) {
+    console.log('[Jobs] Validation failed:', { title, company, location, type, description });
     return res.status(400).json({ error: 'Gerekli ilan detayları eksik.' });
   }
 
@@ -131,6 +133,7 @@ app.post('/api/jobs', (req, res) => {
   };
 
   jobs.unshift(newJob);
+  console.log('[Jobs] Job created:', newJob.id);
   return res.status(201).json({ job: newJob });
 });
 
@@ -511,34 +514,36 @@ app.post('/api/parse-cv', async (req, res) => {
 // 11. Profile Update Endpoint (Candidate)
 app.patch('/api/profile/:userId', (req, res) => {
   const { userId } = req.params;
-  const { fullName, title, experienceYears, skills, location, resumeText, resumeFileName, profileStrength, avatarUrl,
-          companyName, companySize, companySector, companyDescription, companyWebsite, companyCity } = req.body;
+  console.log('[Profile] Update request for user:', userId);
+  const data = req.body;
 
-  const userIndex = users.findIndex((u) => u.id === userId);
+  let userIndex = users.findIndex((u) => u.id === userId);
+  
+  // If user doesn't exist in memory (e.g., after server restart), create from localStorage data
   if (userIndex === -1) {
-    return res.status(404).json({ error: 'Profil bulunamadı.' });
+    console.log('[Profile] User not found, creating from request data');
+    const newUser: User = {
+      id: userId,
+      email: data.email || `${userId}@placeholder.com`,
+      fullName: data.fullName || 'Unknown User',
+      role: userId.startsWith('empl_') ? 'employer' : 'candidate',
+      ...data
+    };
+    users.push(newUser);
+    userIndex = users.length - 1;
   }
 
+  // Update user with all provided fields
   const updatedUser = {
     ...users[userIndex],
-    fullName: fullName || users[userIndex].fullName,
-    title: title || users[userIndex].title,
-    experienceYears: experienceYears !== undefined ? Number(experienceYears) : users[userIndex].experienceYears,
-    skills: Array.isArray(skills) ? skills : users[userIndex].skills,
-    location: location || users[userIndex].location,
-    resumeText: resumeText || users[userIndex].resumeText,
-    resumeFileName: resumeFileName || users[userIndex].resumeFileName,
-    profileStrength: profileStrength !== undefined ? Number(profileStrength) : users[userIndex].profileStrength,
-    avatarUrl: avatarUrl !== undefined ? avatarUrl : users[userIndex].avatarUrl,
-    companyName: companyName !== undefined ? companyName : (users[userIndex] as any).companyName,
-    companySize: companySize !== undefined ? companySize : (users[userIndex] as any).companySize,
-    companySector: companySector !== undefined ? companySector : (users[userIndex] as any).companySector,
-    companyDescription: companyDescription !== undefined ? companyDescription : (users[userIndex] as any).companyDescription,
-    companyWebsite: companyWebsite !== undefined ? companyWebsite : (users[userIndex] as any).companyWebsite,
-    companyCity: companyCity !== undefined ? companyCity : (users[userIndex] as any).companyCity,
+    ...data,
+    id: userId, // Preserve ID
+    email: users[userIndex].email, // Preserve email
+    role: users[userIndex].role // Preserve role
   };
 
   users[userIndex] = updatedUser;
+  console.log('[Profile] User updated successfully:', updatedUser.id);
   return res.json({ user: updatedUser });
 });
 
