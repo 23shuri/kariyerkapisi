@@ -63,7 +63,21 @@ class UserModel(db.Model):
     resume_text = db.Column(db.Text, nullable=True)
     profile_strength = db.Column(db.Integer, default=20)
     avatar_url = db.Column(db.Text, nullable=True)
-
+    education_json = db.Column(db.Text, default='[]')
+    experience_json = db.Column(db.Text, default='[]')
+    languages_json = db.Column(db.Text, default='[]')
+    certificates_json = db.Column(db.Text, default='[]')
+    projects_json = db.Column(db.Text, default='[]')
+    bio = db.Column(db.Text, nullable=True)
+    phone = db.Column(db.String(32), nullable=True)
+    birth_date = db.Column(db.String(64), nullable=True)
+    work_status = db.Column(db.String(64), nullable=True)
+    salary_expectation = db.Column(db.String(128), nullable=True)
+    work_preference = db.Column(db.String(64), nullable=True)
+    github_url = db.Column(db.String(256), nullable=True)
+    linkedin_url = db.Column(db.String(256), nullable=True)
+    portfolio_url = db.Column(db.String(256), nullable=True)
+    cover_photo_url = db.Column(db.Text, nullable=True)
     def to_dict(self):
         return {
             'id': self.id,
@@ -77,7 +91,22 @@ class UserModel(db.Model):
             'resumeFileName': self.resume_file_name,
             'resumeText': self.resume_text,
             'profileStrength': self.profile_strength,
-            'avatarUrl': self.avatar_url
+            'avatarUrl': self.avatar_url,
+            'coverPhotoUrl': self.cover_photo_url,
+            'bio': self.bio,
+            'phone': self.phone,
+            'birthDate': self.birth_date,
+            'workStatus': self.work_status,
+            'salaryExpectation': self.salary_expectation,
+            'workPreference': self.work_preference,
+            'githubUrl': self.github_url,
+            'linkedinUrl': self.linkedin_url,
+            'portfolioUrl': self.portfolio_url,
+            'education': json.loads(self.education_json) if self.education_json else [],
+            'experience': json.loads(self.experience_json) if self.experience_json else [],
+            'languages': json.loads(self.languages_json) if self.languages_json else [],
+            'certificates': json.loads(self.certificates_json) if self.certificates_json else [],
+            'projects': json.loads(self.projects_json) if self.projects_json else []
         }
 
 class JobModel(db.Model):
@@ -1066,6 +1095,36 @@ def update_profile(user_id):
         user.profile_strength = int(data['profileStrength'])
     if 'avatarUrl' in data:
         user.avatar_url = data['avatarUrl']
+    if 'coverPhotoUrl' in data:
+        user.cover_photo_url = data['coverPhotoUrl']
+    if 'bio' in data:
+        user.bio = data['bio']
+    if 'phone' in data:
+        user.phone = data['phone']
+    if 'birthDate' in data:
+        user.birth_date = data['birthDate']
+    if 'workStatus' in data:
+        user.work_status = data['workStatus']
+    if 'salaryExpectation' in data:
+        user.salary_expectation = data['salaryExpectation']
+    if 'workPreference' in data:
+        user.work_preference = data['workPreference']
+    if 'githubUrl' in data:
+        user.github_url = data['githubUrl']
+    if 'linkedinUrl' in data:
+        user.linkedin_url = data['linkedinUrl']
+    if 'portfolioUrl' in data:
+        user.portfolio_url = data['portfolioUrl']
+    if 'education' in data and isinstance(data['education'], list):
+        user.education_json = json.dumps(data['education'])
+    if 'experience' in data and isinstance(data['experience'], list):
+        user.experience_json = json.dumps(data['experience'])
+    if 'languages' in data and isinstance(data['languages'], list):
+        user.languages_json = json.dumps(data['languages'])
+    if 'certificates' in data and isinstance(data['certificates'], list):
+        user.certificates_json = json.dumps(data['certificates'])
+    if 'projects' in data and isinstance(data['projects'], list):
+        user.projects_json = json.dumps(data['projects'])
 
     db.session.commit()
     return jsonify({'user': user.to_dict()})
@@ -1255,30 +1314,34 @@ def get_network_suggestions():
             reasons.append(f"Aynı şehir: {user.location}")
             match_score += 15
         
+        current_education = json.loads(current_user.education_json) if current_user.education_json else []
+        current_experience = json.loads(current_user.experience_json) if current_user.experience_json else []
+        user_education = json.loads(user.education_json) if user.education_json else []
+        user_experience = json.loads(user.experience_json) if user.experience_json else []
+        
         # Same university
-        if current_profile and user_profile:
-            if current_profile.university and user_profile.university and \
-               current_profile.university.lower() == user_profile.university.lower():
-                reasons.append(f"Aynı üniversite: {user_profile.university}")
-                match_score += 20
+        current_unis = {edu.get('school').strip().lower() for edu in current_education if edu.get('school')}
+        user_unis = {edu.get('school').strip().lower() for edu in user_education if edu.get('school')}
+        common_unis = current_unis & user_unis
+        if common_unis:
+            reasons.append(f"Aynı üniversite: {list(common_unis)[0].title()}")
+            match_score += 20 * len(common_unis)
+        
+        # Same department/field
+        current_fields = {edu.get('field').strip().lower() for edu in current_education if edu.get('field')}
+        user_fields = {edu.get('field').strip().lower() for edu in user_education if edu.get('field')}
+        common_fields = current_fields & user_fields
+        if common_fields:
+            reasons.append(f"Aynı bölüm: {list(common_fields)[0].title()}")
+            match_score += 15 * len(common_fields)
             
-            # Same department
-            if current_profile.department and user_profile.department and \
-               current_profile.department.lower() == user_profile.department.lower():
-                reasons.append(f"Aynı bölüm: {user_profile.department}")
-                match_score += 15
-            
-            # Same company
-            if current_profile.company and user_profile.company and \
-               current_profile.company.lower() == user_profile.company.lower():
-                reasons.append(f"Aynı şirket: {user_profile.company}")
-                match_score += 25
-            
-            # Same sector
-            if current_profile.sector and user_profile.sector and \
-               current_profile.sector.lower() == user_profile.sector.lower():
-                reasons.append(f"Aynı sektör: {user_profile.sector}")
-                match_score += 10
+        # Same company
+        current_companies = {exp.get('company').strip().lower() for exp in current_experience if exp.get('company')}
+        user_companies = {exp.get('company').strip().lower() for exp in user_experience if exp.get('company')}
+        common_companies = current_companies & user_companies
+        if common_companies:
+            reasons.append(f"Aynı şirket: {list(common_companies)[0].title()}")
+            match_score += 25 * len(common_companies)
         
         # Similar experience level (±2 years)
         if abs(current_user.experience_years - user.experience_years) <= 2:
