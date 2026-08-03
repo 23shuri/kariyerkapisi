@@ -9,6 +9,7 @@ interface HeaderProps {
   onOpenAuth: (role: 'candidate' | 'employer') => void;
   onOpenNotifications?: () => void;
   onNavigateToSavedJobs?: () => void;
+  onNavigateToProfile?: () => void;
   onViewJobs?: () => void;
   activeView?: string;
   unreadCount?: number;
@@ -24,6 +25,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAuth, 
   onOpenNotifications, 
   onNavigateToSavedJobs,
+  onNavigateToProfile,
   onViewJobs,
   activeView = 'main',
   unreadCount = 0,
@@ -113,7 +115,7 @@ export const Header: React.FC<HeaderProps> = ({
               )}
 
               <button
-                onClick={() => onMainViewChange('network')}
+                onClick={() => onMainViewChange && onMainViewChange('network')}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
                   activeView === 'main' && activeMainView === 'network'
                     ? 'bg-blue-50 text-blue-700'
@@ -123,6 +125,19 @@ export const Header: React.FC<HeaderProps> = ({
                 <Users className="h-4 w-4 inline mr-1" />
                 Network
               </button>
+              {onNavigateToProfile && (
+                <button
+                  onClick={onNavigateToProfile}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-150 ${
+                    activeView === 'profile'
+                      ? 'bg-purple-50 text-purple-700'
+                      : 'text-slate-600 hover:text-purple-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <UserIcon className="h-4 w-4 inline mr-1" />
+                  Profilim
+                </button>
+              )}
             </nav>
           )}
         </div>

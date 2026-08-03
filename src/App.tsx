@@ -10,6 +10,7 @@ import { SavedJobsPage } from './components/SavedJobsPage';
 import { NotificationPanel } from './components/NotificationPanel';
 import { JobListPage } from './components/JobListPage';
 import { JobDetailPage } from './components/JobDetailPage';
+import { PublicProfilePage } from './components/PublicProfilePage';
 import { User, Role, Notification, Job } from './types';
 
 export default function App() {
@@ -21,8 +22,9 @@ export default function App() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [activeTab, setActiveTab] = useState<'home' | 'applications'>('home');
   const [activeMainView, setActiveMainView] = useState<'dashboard' | 'network'>('dashboard');
-  const [activeView, setActiveView] = useState<'main' | 'savedJobs' | 'notifications' | 'jobList' | 'jobDetail'>('main');
+  const [activeView, setActiveView] = useState<'main' | 'savedJobs' | 'notifications' | 'jobList' | 'jobDetail' | 'profile'>('main');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [viewingProfileUserId, setViewingProfileUserId] = useState<string | null>(null);
 
   // Load user session on startup
   useEffect(() => {
@@ -151,6 +153,19 @@ export default function App() {
     setActiveView('jobDetail');
   };
 
+  const handleNavigateToProfile = () => {
+    if (currentUser) {
+      setViewingProfileUserId(currentUser.id);
+      setActiveView('profile');
+    }
+  };
+
+  const handleViewProfile = (userId: string) => {
+    setViewingProfileUserId(userId);
+    setActiveView('profile');
+    window.history.pushState({}, '', `/profile/${userId}`);
+  };
+
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col font-sans text-slate-800">
       {/* Header Navigation */}
@@ -160,6 +175,7 @@ export default function App() {
         onOpenAuth={handleOpenAuth}
         onOpenNotifications={() => setShowNotifications(!showNotifications)}
         onNavigateToSavedJobs={handleNavigateToSavedJobs}
+        onNavigateToProfile={handleNavigateToProfile}
         onViewJobs={handleViewJobList}
         activeView={activeView}
         unreadCount={unreadCount}
@@ -171,7 +187,17 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1">
-        {activeView === 'savedJobs' && currentUser ? (
+        {activeView === 'profile' && viewingProfileUserId ? (
+          <PublicProfilePage 
+            userId={viewingProfileUserId}
+            currentUser={currentUser}
+            onBack={() => {
+              setActiveView('main');
+              setViewingProfileUserId(null);
+              window.history.pushState({}, '', '/');
+            }}
+          />
+        ) : activeView === 'savedJobs' && currentUser ? (
           <SavedJobsPage 
             currentUser={currentUser} 
             onBack={() => setActiveView('main')} 
@@ -211,7 +237,7 @@ export default function App() {
           currentUser.role === 'admin' ? (
             <AdminDashboard currentUser={currentUser} />
           ) : activeMainView === 'network' ? (
-            <NetworkDashboard currentUser={currentUser} />
+            <NetworkDashboard currentUser={currentUser} onViewProfile={handleViewProfile} />
           ) : currentUser.role === 'candidate' ? (
             <CandidateDashboard 
               currentUser={currentUser} 
