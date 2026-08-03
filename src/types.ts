@@ -73,3 +73,15 @@ export interface Notification {
   relatedJobId?: string;
   relatedCompany?: string;
 }
+
+export interface Review {
+  id: string;
+  employerId: string;
+  employerName: string;
+  candidateId: string;
+  candidateName: string;
+  rating: number; // 1-5
+  comment: string;
+  createdAt: string;
+  applicationId: string;
+}

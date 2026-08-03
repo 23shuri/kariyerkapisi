@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   FileText, Sparkles, MapPin, Award, User, Upload, Search, Briefcase, 
   ChevronRight, BadgeAlert, BadgeCheck, CheckCircle2, RefreshCw, Star, Info, CirclePercent, ArrowUpRight,
-  Building2, Clock, Layers, DollarSign, Users, SlidersHorizontal, X
+  Building2, Clock, Layers, DollarSign, Users, SlidersHorizontal, X, MessageSquare
 } from 'lucide-react';
-import { User as UserType, Job, Application, MatchDetail } from '../types';
+import { User as UserType, Job, Application, MatchDetail, Review } from '../types';
 
 interface CandidateDashboardProps {
   currentUser: UserType;
@@ -49,6 +49,15 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
   // Company detail modal
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [companyJob, setCompanyJob] = useState<Job | null>(null);
+
+  // Review modal states
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewApp, setReviewApp] = useState<Application | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewedAppIds, setReviewedAppIds] = useState<string[]>([]);
+  const [reviewSuccess, setReviewSuccess] = useState(false);
 
   // Safe JSON parser — returns null if body is empty or not JSON
   const safeJson = async (res: Response) => {
@@ -230,7 +239,10 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           jobId: job.id,
-          candidateId: currentUser.id
+          candidateId: currentUser.id,
+          candidateName: currentUser.fullName,
+          candidateSkills: currentUser.skills || [],
+          candidateResumeText: currentUser.resumeText || '',
         })
       });
 
@@ -256,6 +268,61 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
     } finally {
       setIsLoadingMatch(false);
       setIsApplying(false);
+    }
+  };
+
+  // Submit Review
+  // Başvuru geri çekme
+  const handleWithdraw = async (appId: string) => {
+    if (!window.confirm('Bu başvuruyu geri çekmek istediğinize emin misiniz?')) return;
+    try {
+      const res = await fetch(`/api/applications/${appId}?candidateId=${currentUser.id}`, {
+        method: 'DELETE',
+      });
+      const data = await safeJson(res);
+      if (res.ok) {
+        fetchData();
+      } else {
+        alert(data?.error || 'Başvuru geri çekilemedi.');
+      }
+    } catch {
+      alert('Sunucuya bağlanılamadı.');
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewApp) return;
+    setIsSubmittingReview(true);
+    const matchingJob = jobs.find(j => j.id === reviewApp.jobId);
+    try {
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employerId: reviewApp.jobId,
+          employerName: matchingJob?.company || 'Şirket',
+          candidateId: currentUser.id,
+          candidateName: currentUser.fullName,
+          rating: reviewRating,
+          comment: reviewComment,
+          applicationId: reviewApp.id,
+        })
+      });
+      const data = await safeJson(res);
+      if (res.ok && data?.review) {
+        setReviewedAppIds(prev => [...prev, reviewApp.id]);
+        setReviewSuccess(true);
+        setTimeout(() => {
+          setShowReviewModal(false);
+          setReviewSuccess(false);
+          setReviewComment('');
+          setReviewRating(5);
+        }, 1500);
+      }
+    } catch (err) {
+      console.error('Review submit error:', err);
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -737,6 +804,16 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
                       <Sparkles className="h-4 w-4" />
                       Uyum Raporu
                     </button>
+                    {/* Geri Çek — sadece Yeni / İnceleniyor durumunda */}
+                    {(app.status === 'Yeni' || app.status === 'İnceleniyor') && (
+                      <button
+                        onClick={() => handleWithdraw(app.id)}
+                        className="inline-flex items-center gap-1.5 border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold py-1.5 px-3 rounded-lg transition"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        Geri Çek
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -753,6 +830,26 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
                     </div>
                   </div>
                 )}
+
+                {/* Değerlendirme butonu — sadece kabul/red sonrası */}
+                {(app.status === 'Kabul Edildi' || app.status === 'Reddedildi') && (
+                  <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-xs text-slate-400">Bu işvereni değerlendirmek ister misiniz?</span>
+                    {reviewedAppIds.includes(app.id) ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Değerlendirdiniz
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => { setReviewApp(app); setShowReviewModal(true); }}
+                        className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold py-1.5 px-4 rounded-lg transition cursor-pointer"
+                      >
+                        <Star className="h-3.5 w-3.5" />
+                        Değerlendir
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -760,6 +857,93 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
       )}
     </div>
   )}
+
+      {/* REVIEW MODAL */}
+      {showReviewModal && reviewApp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowReviewModal(false)} />
+          <div className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl max-h-[90vh] flex flex-col">
+            
+            {/* Header */}
+            <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-amber-50 to-white flex items-center justify-between">
+              <div>
+                <h3 className="font-display text-lg font-bold text-slate-900">İşveren Değerlendirme</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {jobs.find(j => j.id === reviewApp.jobId)?.company || 'Şirket'}
+                </p>
+              </div>
+              <button onClick={() => setShowReviewModal(false)} className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full transition">✕</button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {reviewSuccess ? (
+                <div className="flex flex-col items-center py-8">
+                  <CheckCircle2 className="h-12 w-12 text-emerald-500 mb-3" />
+                  <p className="text-base font-bold text-slate-900">Değerlendirmeniz alındı!</p>
+                  <p className="text-xs text-slate-400 mt-1">Geri bildiriminiz için teşekkürler.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Yıldız seçici */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-3">Puan</label>
+                    <div className="flex items-center gap-2">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setReviewRating(star)}
+                          className="transition-transform hover:scale-110 cursor-pointer"
+                        >
+                          <Star
+                            className={`h-8 w-8 ${star <= reviewRating ? 'text-amber-400 fill-amber-400' : 'text-slate-300'}`}
+                          />
+                        </button>
+                      ))}
+                      <span className="ml-2 text-sm font-bold text-slate-700">
+                        {reviewRating === 1 ? 'Çok Kötü' : reviewRating === 2 ? 'Kötü' : reviewRating === 3 ? 'Orta' : reviewRating === 4 ? 'İyi' : 'Mükemmel'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Yorum */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-2">Yorumunuz</label>
+                    <textarea
+                      rows={4}
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.target.value)}
+                      placeholder="İşveren hakkındaki deneyiminizi paylaşın... (isteğe bağlı)"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 px-4 text-sm text-slate-700 outline-none focus:border-amber-400 focus:bg-white transition resize-none"
+                    />
+                  </div>
+
+                  {/* Uyarı */}
+                  <div className="flex items-start gap-2 bg-blue-50 rounded-xl p-3 border border-blue-100">
+                    <Info className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                    <p className="text-xs text-blue-700">Değerlendirmeniz diğer adayların daha bilinçli kararlar almasına yardımcı olur.</p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {!reviewSuccess && (
+              <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2">
+                <button onClick={() => setShowReviewModal(false)} className="bg-white border border-slate-200 text-slate-700 font-semibold text-xs py-2 px-4 rounded-xl transition hover:bg-slate-50">
+                  İptal
+                </button>
+                <button
+                  onClick={handleSubmitReview}
+                  disabled={isSubmittingReview}
+                  className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs py-2 px-5 rounded-xl transition disabled:opacity-50 cursor-pointer"
+                >
+                  {isSubmittingReview ? 'Gönderiliyor...' : 'Değerlendirmeyi Gönder'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* COMPANY DETAIL MODAL */}
       {showCompanyModal && companyJob && (

@@ -55,15 +55,22 @@ app.use('/uploads', express.static(path.resolve(uploadDir)));
 // 1. Auth Endpoint: Login
 app.post('/api/auth/login', (req, res) => {
   console.log('[Login] Request received:', req.body);
-  const { email, password } = req.body;
+  const { email, password, sessionUser } = req.body;
   
   if (!email || !password) {
     console.log('[Login] Missing credentials');
     return res.status(400).json({ error: 'E-posta ve şifre gereklidir.' });
   }
 
-  // Basic mock check: password should be at least 4 chars
-  const user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+  let user = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+
+  // Sunucu restart sonrası kullanıcı bellekte yok — session bilgisiyle yeniden oluştur
+  if (!user && sessionUser && sessionUser.email?.toLowerCase() === email.toLowerCase()) {
+    user = { ...sessionUser };
+    users.push(user);
+    console.log(`[Login] Auto-restored session user: ${user.id}`);
+  }
+
   if (!user) {
     console.log('[Login] User not found:', email);
     return res.status(401).json({ error: 'Kullanıcı bulunamadı. Lütfen kayıt olun.' });
@@ -152,13 +159,50 @@ app.get('/api/applications', (req, res) => {
   }
 
   if (role === 'employer') {
-    // Return all applications for jobs posted by this employer (or all for demo simplicity)
     return res.json({ applications });
   } else {
-    // Return applications submitted by this candidate
     const list = applications.filter((a) => a.candidateId === userId);
     return res.json({ applications: list });
   }
+});
+
+// 6b. Applications Endpoint: Withdraw (DELETE)
+app.delete('/api/applications/:applicationId', (req, res) => {
+  const { applicationId } = req.params;
+  const { candidateId } = req.query as { candidateId: string };
+
+  const appIndex = applications.findIndex((a) => a.id === applicationId);
+  if (appIndex === -1) {
+    return res.status(404).json({ error: 'Başvuru bulunamadı.' });
+  }
+
+  const app = applications[appIndex];
+
+  // Güvenlik: sadece başvuruyu yapan aday geri çekebilir
+  if (candidateId && app.candidateId !== candidateId) {
+    return res.status(403).json({ error: 'Bu başvuruyu geri çekme yetkiniz yok.' });
+  }
+
+  // Sadece "Yeni" veya "İnceleniyor" durumundaki başvurular geri çekilebilir
+  if (app.status === 'Kabul Edildi' || app.status === 'Mülakat') {
+    return res.status(400).json({ error: `Başvuru "${app.status}" aşamasında olduğu için geri çekilemez.` });
+  }
+
+  // Başvuruyu sil
+  applications.splice(appIndex, 1);
+
+  // İlandaki başvuru sayısını güncelle
+  const job = jobs.find((j) => j.id === app.jobId);
+  if (job && job.applicationCount > 0) {
+    job.applicationCount -= 1;
+  }
+
+  // Match detayını da temizle
+  const matchKey = `${app.jobId}_${app.candidateId}`;
+  delete matchDetails[matchKey];
+
+  console.log(`[Applications] Withdrawn: ${applicationId} by ${candidateId}`);
+  return res.json({ success: true, message: 'Başvurunuz başarıyla geri çekildi.' });
 });
 
 // Helper for deterministic local math score in case API key is missing
@@ -226,12 +270,28 @@ function calculateHeuristicMatch(cvText: string, jobDesc: string, jobSkills: str
 
 // 7. Applications Endpoint: Submit application and perform AI match
 app.post('/api/applications', async (req, res) => {
-  const { jobId, candidateId } = req.body;
+  const { jobId, candidateId, candidateName, candidateSkills, candidateResumeText } = req.body;
   if (!jobId || !candidateId) {
     return res.status(400).json({ error: 'İlan ve aday kimlikleri gereklidir.' });
   }
 
-  const candidate = users.find((u) => u.id === candidateId);
+  let candidate = users.find((u) => u.id === candidateId);
+
+  // Kullanıcı sunucu restart sonrası bellekte yoksa — session'dan gelen bilgilerle yeniden oluştur
+  if (!candidate && candidateId) {
+    candidate = {
+      id: candidateId,
+      email: `${candidateId}@session.local`,
+      fullName: candidateName || 'Aday',
+      role: 'candidate',
+      skills: Array.isArray(candidateSkills) ? candidateSkills : [],
+      resumeText: candidateResumeText || '',
+      profileStrength: 50,
+    };
+    users.push(candidate);
+    console.log(`[Applications] Auto-restored session user: ${candidateId}`);
+  }
+
   const job = jobs.find((j) => j.id === jobId);
 
   if (!candidate || !job) {
@@ -555,6 +615,70 @@ app.get('/api/stats/employer', (req, res) => {
     highMatches,
     inInterview,
   });
+});
+
+// 13. Notifications Endpoint
+app.get('/api/notifications', (req, res) => {
+  const userId = req.query.userId as string;
+  if (!userId) {
+    return res.status(400).json({ error: 'Kullanıcı kimliği gereklidir.' });
+  }
+  return res.json({ notifications: [], unreadCount: 0 });
+});
+
+// 14. Reviews Endpoints
+interface Review {
+  id: string;
+  employerId: string;
+  employerName: string;
+  candidateId: string;
+  candidateName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  applicationId: string;
+}
+
+let reviews: Review[] = [];
+
+// GET — işverene ait tüm değerlendirmeleri getir
+app.get('/api/reviews/:employerId', (req, res) => {
+  const { employerId } = req.params;
+  const employerReviews = reviews.filter(r => r.employerId === employerId);
+  const avgRating = employerReviews.length > 0
+    ? Math.round((employerReviews.reduce((sum, r) => sum + r.rating, 0) / employerReviews.length) * 10) / 10
+    : 0;
+  return res.json({ reviews: employerReviews, averageRating: avgRating, totalReviews: employerReviews.length });
+});
+
+// POST — yeni değerlendirme ekle
+app.post('/api/reviews', (req, res) => {
+  const { employerId, employerName, candidateId, candidateName, rating, comment, applicationId } = req.body;
+
+  if (!employerId || !candidateId || !rating) {
+    return res.status(400).json({ error: 'Eksik bilgi.' });
+  }
+
+  // Aynı başvuru için tekrar değerlendirme yapılmasın
+  const alreadyReviewed = reviews.some(r => r.applicationId === applicationId && r.candidateId === candidateId);
+  if (alreadyReviewed) {
+    return res.status(400).json({ error: 'Bu işveren için zaten değerlendirme yaptınız.' });
+  }
+
+  const newReview: Review = {
+    id: `rev_${Date.now()}`,
+    employerId,
+    employerName,
+    candidateId,
+    candidateName,
+    rating: Math.min(5, Math.max(1, Number(rating))),
+    comment: comment || '',
+    createdAt: new Date().toLocaleDateString('tr-TR'),
+    applicationId,
+  };
+
+  reviews.unshift(newReview);
+  return res.status(201).json({ review: newReview });
 });
 
 // Vite Middleware & SPA serving

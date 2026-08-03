@@ -13,6 +13,8 @@ interface EmployerDashboardProps {
 export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUser, onNotificationChange }) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
+  const [avgRating, setAvgRating] = useState<number>(0);
+  const [totalReviews, setTotalReviews] = useState<number>(0);
   
   // Dashboard overall statistics
   const [stats, setStats] = useState({
@@ -53,20 +55,25 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
 
   const fetchData = async () => {
     try {
-      // Get jobs
       const jobsRes = await fetch('/api/jobs');
       const jobsData = await jobsRes.json();
       setJobs(jobsData.jobs || []);
 
-      // Get applications
       const appsRes = await fetch(`/api/applications?userId=${currentUser.id}&role=employer`);
       const appsData = await appsRes.json();
       setApplications(appsData.applications || []);
 
-      // Get stats
       const statsRes = await fetch('/api/stats/employer');
       const statsData = await statsRes.json();
       setStats(statsData);
+
+      // Değerlendirmeleri getir
+      const reviewsRes = await fetch(`/api/reviews/${currentUser.id}`);
+      if (reviewsRes.ok) {
+        const reviewsData = await reviewsRes.json();
+        setAvgRating(reviewsData.averageRating || 0);
+        setTotalReviews(reviewsData.totalReviews || 0);
+      }
     } catch (err) {
       console.error('Employer data fetch failed:', err);
     }
@@ -254,7 +261,12 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
                     📍 {(currentUser as any).companyCity}
                   </span>
                 )}
-                {!(currentUser as any).companySector && !(currentUser as any).companySize && (
+                {totalReviews > 0 && (
+                  <span className="text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    ⭐ {avgRating} / 5 <span className="text-amber-500">({totalReviews} değerlendirme)</span>
+                  </span>
+                )}
+                {!(currentUser as any).companySector && !(currentUser as any).companySize && totalReviews === 0 && (
                   <span className="text-[10px] text-slate-400">Şirket bilgileri henüz eklenmedi</span>
                 )}
               </div>

@@ -8,7 +8,9 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { NetworkDashboard } from './components/NetworkDashboard';
 import { SavedJobsPage } from './components/SavedJobsPage';
 import { NotificationPanel } from './components/NotificationPanel';
-import { User, Role, Notification } from './types';
+import { JobListPage } from './components/JobListPage';
+import { JobDetailPage } from './components/JobDetailPage';
+import { User, Role, Notification, Job } from './types';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -19,7 +21,8 @@ export default function App() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [activeTab, setActiveTab] = useState<'home' | 'applications'>('home');
   const [activeMainView, setActiveMainView] = useState<'dashboard' | 'network'>('dashboard');
-  const [activeView, setActiveView] = useState<'main' | 'savedJobs' | 'notifications'>('main');
+  const [activeView, setActiveView] = useState<'main' | 'savedJobs' | 'notifications' | 'jobList' | 'jobDetail'>('main');
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
   // Load user session on startup
   useEffect(() => {
@@ -91,11 +94,21 @@ export default function App() {
     setCurrentUser(user);
     localStorage.setItem('kariyer_kapisi_session', JSON.stringify(user));
     setShowAuthModal(false);
+    // İlan sayfasındaysa orada kal, değilse dashboard'a yönlendir
+    if (activeView !== 'jobList' && activeView !== 'jobDetail') {
+      setActiveView('main');
+      setActiveMainView('dashboard');
+      setActiveTab('home');
+    }
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem('kariyer_kapisi_session');
+    // Çıkış yapınca ana sayfaya dön
+    setActiveView('main');
+    setActiveMainView('dashboard');
+    setActiveTab('home');
   };
 
   const handleOpenAuth = (role: Role) => {
@@ -112,6 +125,32 @@ export default function App() {
     setActiveView('savedJobs');
   };
 
+  // Herhangi bir dashboard sekmesine geçilince activeView'i 'main'e sıfırla
+  const handleMainViewChange = (view: 'dashboard' | 'network') => {
+    setActiveView('main');
+    setActiveMainView(view);
+  };
+
+  const handleTabChange = (tab: 'home' | 'applications') => {
+    setActiveView('main');
+    setActiveTab(tab);
+  };
+
+  const handleViewJobList = () => {
+    if (!currentUser) {
+      setAuthRole('candidate');
+      setShowAuthModal(true);
+      return;
+    }
+    setSelectedJob(null);
+    setActiveView('jobList');
+  };
+
+  const handleViewJobDetail = (job: Job) => {
+    setSelectedJob(job);
+    setActiveView('jobDetail');
+  };
+
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col font-sans text-slate-800">
       {/* Header Navigation */}
@@ -121,11 +160,13 @@ export default function App() {
         onOpenAuth={handleOpenAuth}
         onOpenNotifications={() => setShowNotifications(!showNotifications)}
         onNavigateToSavedJobs={handleNavigateToSavedJobs}
+        onViewJobs={handleViewJobList}
+        activeView={activeView}
         unreadCount={unreadCount}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         activeMainView={activeMainView}
-        onMainViewChange={setActiveMainView}
+        onMainViewChange={handleMainViewChange}
       />
 
       {/* Main Content Area */}
@@ -135,6 +176,37 @@ export default function App() {
             currentUser={currentUser} 
             onBack={() => setActiveView('main')} 
           />
+        ) : activeView === 'jobList' ? (
+          currentUser ? (
+            <JobListPage
+              currentUser={currentUser}
+              onViewDetail={handleViewJobDetail}
+              onOpenAuth={handleOpenAuth}
+            />
+          ) : (
+            // Giriş yapılmamışsa login modal aç ve ana sayfaya dön
+            (() => {
+              setActiveView('main');
+              setShowAuthModal(true);
+              return null;
+            })()
+          )
+        ) : activeView === 'jobDetail' && selectedJob ? (
+          currentUser ? (
+            <JobDetailPage
+              job={selectedJob}
+              currentUser={currentUser}
+              onBack={() => setActiveView('jobList')}
+              onOpenAuth={handleOpenAuth}
+              onApplied={fetchNotifications}
+            />
+          ) : (
+            (() => {
+              setActiveView('main');
+              setShowAuthModal(true);
+              return null;
+            })()
+          )
         ) : currentUser ? (
           currentUser.role === 'admin' ? (
             <AdminDashboard currentUser={currentUser} />
@@ -155,7 +227,7 @@ export default function App() {
         ) : (
           <div className="space-y-0">
             {/* Landing Hero */}
-            <Hero onOpenAuth={handleOpenAuth} />
+            <Hero onOpenAuth={handleOpenAuth} onViewJobs={handleViewJobList} />
 
             {/* Platform Stats / Future Proof Info Box */}
             <section className="bg-white py-16 sm:py-20 border-t border-slate-200">

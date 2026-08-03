@@ -23,8 +23,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ initialRole, onClose, onSu
     setIsLoading(true);
 
     const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+
+    // Login sırasında localStorage'daki session'u da gönder — sunucu restart sonrası kullanıcıyı kurtarır
+    const savedSession = localStorage.getItem('kariyer_kapisi_session');
+    const sessionUser = savedSession ? JSON.parse(savedSession) : null;
+
     const payload = isLogin 
-      ? { email, password } 
+      ? { email, password, sessionUser } 
       : { email, fullName, role, password };
 
     try {

@@ -4,9 +4,10 @@ import { motion } from 'motion/react';
 
 interface HeroProps {
   onOpenAuth: (role: 'candidate' | 'employer') => void;
+  onViewJobs: () => void;
 }
 
-export const Hero: React.FC<HeroProps> = ({ onOpenAuth }) => {
+export const Hero: React.FC<HeroProps> = ({ onOpenAuth, onViewJobs }) => {
   return (
     <div className="relative overflow-hidden bg-gradient-to-b from-slate-50/60 to-white py-16 sm:py-24">
       {/* Decorative background grid */}
