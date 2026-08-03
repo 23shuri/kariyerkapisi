@@ -72,6 +72,11 @@ export const NetworkDashboard: React.FC<NetworkDashboardProps> = ({ currentUser 
   // Profile modal state
   const [viewProfileUser, setViewProfileUser] = useState<User | null>(null);
 
+  // User search states
+  const [discoverSearchQuery, setDiscoverSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
   useEffect(() => {
     fetchNetworkData();
   }, [currentUser.id]);
@@ -197,6 +202,29 @@ export const NetworkDashboard: React.FC<NetworkDashboardProps> = ({ currentUser 
   const handleSelectConversation = (partnerId: string) => {
     setSelectedConversation(partnerId);
     loadMessages(partnerId);
+  };
+
+  // Search users in Discover tab
+  const handleSearchUsers = async (query: string) => {
+    setDiscoverSearchQuery(query);
+    
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const res = await fetch(`/api/network/search?query=${encodeURIComponent(query)}&userId=${currentUser.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSearchResults(data.users || []);
+      }
+    } catch (err) {
+      console.error('User search failed:', err);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const filteredSuggestions = suggestions.filter(s =>
