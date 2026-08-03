@@ -2000,3 +2000,28 @@ if __name__ == '__main__':
         seed_data()
     print("[Flask Server] Running Python Flask + SQL API at http://127.0.0.1:5001")
     app.run(host='0.0.0.0', port=5001, debug=True)
+
+
+# 27. Network: Search Users
+@app.route('/api/network/search', methods=['GET'])
+def search_users():
+    query = request.args.get('query', '').strip()
+    current_user_id = request.args.get('userId')
+    
+    if not query or len(query) < 2:
+        return jsonify({'users': []})
+    
+    # Search by name, title, location, or skills
+    search_pattern = f"%{query}%"
+    
+    users = UserModel.query.filter(
+        db.or_(
+            UserModel.full_name.ilike(search_pattern),
+            UserModel.title.ilike(search_pattern),
+            UserModel.location.ilike(search_pattern),
+            UserModel.skills_json.ilike(search_pattern)
+        ),
+        UserModel.id != current_user_id  # Exclude current user
+    ).limit(20).all()
+    
+    return jsonify({'users': [u.to_dict() for u in users]})
