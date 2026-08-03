@@ -131,23 +131,6 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center space-x-3">
           {currentUser ? (
             <div className="flex items-center space-x-4">
-              <div className="hidden sm:flex flex-col items-end">
-                <span className="text-sm font-semibold text-slate-800">{currentUser.fullName}</span>
-                <span className="text-xs text-slate-500 flex items-center gap-1">
-                  {currentUser.role === 'employer' ? (
-                    <>
-                      <Building className="h-3 w-3 text-emerald-500" />
-                      İş Veren Paneli
-                    </>
-                  ) : (
-                    <>
-                      <UserIcon className="h-3 w-3 text-emerald-500" />
-                      Aday Paneli
-                    </>
-                  )}
-                </span>
-              </div>
-              
               {/* Profile Menu Dropdown */}
               <ProfileMenu
                 currentUser={currentUser}

@@ -38,6 +38,8 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
   // Profile modal states
   const [showProfileViewModal, setShowProfileViewModal] = useState(false);
   const [showProfileEditModal, setShowProfileEditModal] = useState(false);
+  const [showProfileWizard, setShowProfileWizard] = useState(false);
+  const [showCertificateManager, setShowCertificateManager] = useState(false);
   
   // Selected Match/Job details for modal
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
@@ -223,6 +225,24 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
     } finally {
       setIsSavingProfile(false);
       setTimeout(() => setSaveProfileMessage(null), 3000);
+    }
+  };
+
+  // Update certificates
+  const handleCertificateUpdate = async (certificates: typeof currentUser.certificates) => {
+    try {
+      const response = await fetch(`/api/profile/${currentUser.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ certificates })
+      });
+
+      const data = await safeJson(response);
+      if (response.ok && data) {
+        onProfileUpdated(data.user);
+      }
+    } catch (err) {
+      console.error('Certificate update error:', err);
     }
   };
 
@@ -429,20 +449,32 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
             </div>
 
             {/* Profile Action Buttons */}
-            <div className="flex gap-2 mb-4">
+            <div className="grid grid-cols-2 gap-2 mb-4">
               <button
-                onClick={() => setShowProfileViewModal(true)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2 px-3 rounded-lg transition cursor-pointer"
+                onClick={() => setShowProfileWizard(true)}
+                className="inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2 px-3 rounded-lg transition cursor-pointer"
               >
-                <User className="h-3.5 w-3.5" />
-                Profili Görüntüle
+                <Sparkles className="h-3.5 w-3.5" />
+                Profili Tamamla
               </button>
               <button
                 onClick={() => setShowProfileEditModal(true)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2 px-3 rounded-lg transition cursor-pointer"
+                className="inline-flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2 px-3 rounded-lg transition cursor-pointer"
               >
                 <Award className="h-3.5 w-3.5" />
-                Profili Düzenle
+                Hızlı Düzenle
+              </button>
+              <button
+                onClick={() => setShowCertificateManager(true)}
+                className="col-span-2 inline-flex items-center justify-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold py-2 px-3 rounded-lg transition cursor-pointer"
+              >
+                <Award className="h-3.5 w-3.5" />
+                Sertifikalarımı Yönet
+                {currentUser.certificates && currentUser.certificates.length > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 bg-purple-500 rounded-full text-[10px]">
+                    {currentUser.certificates.length}
+                  </span>
+                )}
               </button>
             </div>
 
@@ -454,6 +486,7 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
                 { label: 'Konum', done: !!currentUser.location },
                 { label: 'Yetenekler', done: !!(currentUser.skills && currentUser.skills.length > 0) },
                 { label: 'Deneyim', done: !!(currentUser.experienceYears && currentUser.experienceYears > 0) },
+                { label: 'Sertifikalar', done: !!(currentUser.certificates && currentUser.certificates.length > 0) },
                 { label: 'CV Yüklendi', done: !!currentUser.resumeFileName },
                 { label: 'Profil Fotoğrafı', done: !!currentUser.avatarUrl },
               ];
@@ -1496,6 +1529,45 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
 
           </div>
         </div>
+      )}
+
+      {/* Certificate Manager Modal */}
+      {showCertificateManager && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-slate-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-slate-900">Sertifika Yönetimi</h2>
+                <button
+                  onClick={() => setShowCertificateManager(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              <CertificateManager
+                certificates={currentUser.certificates || []}
+                onUpdate={handleCertificateUpdate}
+                userTitle={currentUser.title}
+                userSkills={currentUser.skills}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Profile Wizard Modal */}
+      {showProfileWizard && (
+        <ProfileWizard
+          currentUser={currentUser}
+          onComplete={(updatedUser) => {
+            onProfileUpdated(updatedUser);
+            setShowProfileWizard(false);
+          }}
+          onClose={() => setShowProfileWizard(false)}
+        />
       )}
 
     </div>

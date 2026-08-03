@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Building, Briefcase, Users, Star, Sparkles, Plus, Trash2, CheckCircle2, 
-  MapPin, Clock, Search, RefreshCw, BadgeCheck, BadgeAlert, FileText, ChevronDown, Check, X
+  MapPin, Clock, Search, RefreshCw, BadgeCheck, BadgeAlert, FileText, ChevronDown, Check, X, Upload
 } from 'lucide-react';
 import { Job, Application, MatchDetail } from '../types';
 
 interface EmployerDashboardProps {
-  currentUser: { id: string; fullName: string };
+  currentUser: { id: string; fullName: string; avatarUrl?: string };
   onNotificationChange?: () => void;
 }
 
@@ -38,13 +38,9 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
   // Profile modal states
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [editingName, setEditingName] = useState(currentUser.fullName);
-  const [editingCompanyName, setEditingCompanyName] = useState((currentUser as any).companyName || '');
-  const [editingCompanySize, setEditingCompanySize] = useState((currentUser as any).companySize || '');
-  const [editingCompanySector, setEditingCompanySector] = useState((currentUser as any).companySector || '');
-  const [editingCompanyDescription, setEditingCompanyDescription] = useState((currentUser as any).companyDescription || '');
-  const [editingCompanyWebsite, setEditingCompanyWebsite] = useState((currentUser as any).companyWebsite || '');
-  const [editingCompanyCity, setEditingCompanyCity] = useState((currentUser as any).companyCity || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   // Selected applicant match states
   const [selectedApp, setSelectedApp] = useState<Application | null>(null);
@@ -89,22 +85,31 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
     setIsPosting(true);
 
     const skillsArray = jobSkills.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    
+    const jobData = {
+      title: jobTitle,
+      company: currentUser.fullName.replace(' İK', '').trim(),
+      location: jobLocation,
+      type: jobType,
+      skills: skillsArray,
+      experienceLevel: jobExperience,
+      description: jobDescription,
+      salaryRange: jobSalary
+    };
+    
+    console.log('Posting job data:', jobData);
 
     try {
       const response = await fetch('/api/jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: jobTitle,
-          company: currentUser.fullName.replace(' İK', '').trim(),
-          location: jobLocation,
-          type: jobType,
-          skills: skillsArray,
-          experienceLevel: jobExperience,
-          description: jobDescription,
-          salaryRange: jobSalary
-        })
+        body: JSON.stringify(jobData)
       });
+      
+      console.log('Response status:', response.status);
+      
+      const responseData = await response.json();
+      console.log('Response data:', responseData);
 
       if (response.ok) {
         setShowPostJob(false);
@@ -115,9 +120,12 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
         setJobDescription('');
         
         await fetchData();
+      } else {
+        alert(`Hata: ${responseData.error || 'İlan yayınlanamadı'}`);
       }
     } catch (err) {
       console.error('Post job failed:', err);
+      alert('İlan yayınlanırken hata oluştu. Lütfen kontrol edin.');
     } finally {
       setIsPosting(false);
     }
@@ -181,28 +189,58 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
     setIsSavingProfile(true);
 
     try {
+      let avatarUrl = currentUser.avatarUrl || null;
+      
+      // If user selected a new avatar, convert to base64
+      if (avatarFile) {
+        avatarUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            resolve(reader.result as string);
+          };
+          reader.readAsDataURL(avatarFile);
+        });
+      }
+
+      console.log('[Profile] Saving with avatarUrl:', avatarUrl ? 'Updated' : 'No change');
+
       const response = await fetch(`/api/profile/${currentUser.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fullName: editingName,
-          companyName: editingCompanyName,
-          companySize: editingCompanySize,
-          companySector: editingCompanySector,
-          companyDescription: editingCompanyDescription,
-          companyWebsite: editingCompanyWebsite,
-          companyCity: editingCompanyCity,
+          avatarUrl: avatarUrl
         })
       });
 
       if (response.ok) {
-        setShowProfileModal(false);
+        const data = await response.json();
+        console.log('[Profile] Save successful:', data);
+        // Update parent - simple refresh to update header name and avatar
         window.location.reload();
+      } else {
+        const errorData = await response.json();
+        console.error('[Profile] Save failed:', errorData);
+        alert(`Profil kaydedilemedi: ${errorData.error || 'Bilinmeyen hata'}`);
       }
     } catch (err) {
       console.error('Profile save error:', err);
+      alert('Profil güncellenirken hata oluştu.');
     } finally {
       setIsSavingProfile(false);
+    }
+  };
+
+  // Handle avatar file selection
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAvatarFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -270,6 +308,10 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
                   <span className="text-[10px] text-slate-400">Şirket bilgileri henüz eklenmedi</span>
                 )}
               </div>
+            )}
+            <div>
+              <h3 className="font-display text-base font-bold text-slate-900">{currentUser.fullName}</h3>
+              <p className="text-xs text-slate-400 font-medium">İşveren Hesabı</p>
             </div>
           </div>
           <button
@@ -280,21 +322,6 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
             Profili Düzenle
           </button>
         </div>
-        {(currentUser as any).companyDescription && (
-          <p className="mt-3 text-xs text-slate-500 leading-relaxed border-t border-slate-100 pt-3">
-            {(currentUser as any).companyDescription}
-          </p>
-        )}
-        {(currentUser as any).companyWebsite && (
-          <a
-            href={(currentUser as any).companyWebsite}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-emerald-600 hover:underline mt-2 font-semibold"
-          >
-            🌐 {(currentUser as any).companyWebsite}
-          </a>
-        )}
       </div>
 
       {/* 1. Statistics Row */}
@@ -474,6 +501,7 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
                   <button
                     type="submit"
                     disabled={isPosting}
+                    onClick={() => console.log('[Submit Button] Clicked, isPosting:', isPosting)}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium py-1.5 px-4 rounded-lg shadow-sm transition disabled:opacity-50 cursor-pointer"
                   >
                     {isPosting ? 'Yayınlanıyor...' : 'İlanı Yayınla'}
@@ -776,145 +804,63 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowProfileModal(false)} />
           
-          <div className="relative w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl max-h-[90vh] flex flex-col">
+          <div className="relative w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl max-h-[90vh] flex flex-col">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-white">
-              <div>
-                <h3 className="font-display text-lg font-bold text-slate-900">Şirket Profili Düzenle</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Adaylar bu bilgileri ilanlarınızda görecek</p>
-              </div>
-              <button onClick={() => setShowProfileModal(false)} className="text-slate-400 hover:text-slate-600 rounded-full p-1.5 transition">✕</button>
+              <h3 className="font-display text-lg font-bold text-slate-900">Profil Düzenle</h3>
+              <button onClick={() => setShowProfileModal(false)} className="text-slate-400 hover:text-slate-600 rounded-full p-1.5 transition">
+                ✕
+              </button>
             </div>
             
             <form onSubmit={handleSaveProfile} className="p-6 overflow-y-auto flex-1 space-y-4">
-
-              {/* Şirket logosu / baş harf */}
-              <div className="flex items-center gap-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-600 text-white font-bold text-2xl shadow-sm">
-                  {(editingCompanyName || editingName).charAt(0).toUpperCase()}
+              <div className="flex items-center gap-4 mb-4">
+                <div className="relative">
+                  {avatarPreview || currentUser.avatarUrl ? (
+                    <img 
+                      src={avatarPreview || currentUser.avatarUrl || ''} 
+                      alt="Profil Fotoğrafı" 
+                      className="h-16 w-16 rounded-2xl object-cover ring-2 ring-slate-200"
+                    />
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 font-bold text-2xl">
+                      {editingName.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <label className="absolute -bottom-1 -right-1 bg-emerald-600 text-white p-1.5 rounded-full cursor-pointer hover:bg-emerald-700 transition">
+                    <Upload className="h-3 w-3" />
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleAvatarChange}
+                      className="hidden" 
+                    />
+                  </label>
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-emerald-900">{editingCompanyName || editingName}</p>
-                  <p className="text-[10px] text-emerald-600 mt-0.5">İşveren Hesabı · {currentUser.email}</p>
-                </div>
-              </div>
-
-              {/* Hesap adı */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Hesap / İK Adı</label>
-                <input
-                  type="text"
-                  value={editingName}
-                  onChange={(e) => setEditingName(e.target.value)}
-                  className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
-                  placeholder="Örn: TechCorp A.Ş. İK"
-                />
-              </div>
-
-              {/* Şirket adı */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Şirket Adı</label>
-                <input
-                  type="text"
-                  value={editingCompanyName}
-                  onChange={(e) => setEditingCompanyName(e.target.value)}
-                  className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
-                  placeholder="Örn: TechCorp A.Ş."
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {/* Sektör */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Sektör</label>
-                  <select
-                    value={editingCompanySector}
-                    onChange={(e) => setEditingCompanySector(e.target.value)}
+                <div className="flex-1">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Şirket/İşveren Adı</label>
+                  <input 
+                    type="text" 
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
                     className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
-                  >
-                    <option value="">Sektör Seçin</option>
-                    <option>Yazılım & Teknoloji</option>
-                    <option>Finans & Bankacılık</option>
-                    <option>Sağlık & İlaç</option>
-                    <option>E-Ticaret & Perakende</option>
-                    <option>Eğitim & Öğretim</option>
-                    <option>Medya & Reklam</option>
-                    <option>Üretim & Sanayi</option>
-                    <option>Lojistik & Taşımacılık</option>
-                    <option>Danışmanlık</option>
-                    <option>Gayrimenkul</option>
-                    <option>Turizm & Otelcilik</option>
-                    <option>Diğer</option>
-                  </select>
-                </div>
-
-                {/* Çalışan sayısı */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Çalışan Sayısı</label>
-                  <select
-                    value={editingCompanySize}
-                    onChange={(e) => setEditingCompanySize(e.target.value)}
-                    className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
-                  >
-                    <option value="">Boyut Seçin</option>
-                    <option>1-10 çalışan</option>
-                    <option>11-50 çalışan</option>
-                    <option>51-200 çalışan</option>
-                    <option>201-500 çalışan</option>
-                    <option>501-1000 çalışan</option>
-                    <option>1000+ çalışan</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                {/* Şehir */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Şehir</label>
-                  <input
-                    type="text"
-                    value={editingCompanyCity}
-                    onChange={(e) => setEditingCompanyCity(e.target.value)}
-                    className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
-                    placeholder="İstanbul"
-                  />
-                </div>
-
-                {/* Web sitesi */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Web Sitesi</label>
-                  <input
-                    type="text"
-                    value={editingCompanyWebsite}
-                    onChange={(e) => setEditingCompanyWebsite(e.target.value)}
-                    className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
-                    placeholder="https://sirket.com"
                   />
                 </div>
               </div>
 
-              {/* Şirket hakkında */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Şirket Hakkında</label>
-                <textarea
-                  rows={3}
-                  value={editingCompanyDescription}
-                  onChange={(e) => setEditingCompanyDescription(e.target.value)}
-                  className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all resize-none"
-                  placeholder="Şirketiniz hakkında kısa bir açıklama yazın..."
-                />
+              <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                <p className="text-xs font-semibold text-slate-500 mb-1">Hesap Tipi</p>
+                <p className="text-sm font-bold text-slate-900">İşveren Hesabı</p>
               </div>
-
             </form>
             
             <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2">
               <button type="button" onClick={() => setShowProfileModal(false)} className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs py-2 px-4 rounded-xl transition">
                 İptal
               </button>
-              <button
+              <button 
                 onClick={handleSaveProfile}
                 disabled={isSavingProfile}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-2 px-5 rounded-xl transition disabled:opacity-50"
-              >
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-2 px-5 rounded-xl transition disabled:opacity-50">
                 {isSavingProfile ? 'Kaydediliyor...' : 'Kaydet'}
               </button>
             </div>

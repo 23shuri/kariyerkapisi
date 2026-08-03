@@ -6,6 +6,7 @@ import {
   Linkedin, ExternalLink, Filter, ChevronRight, Clock, Eye
 } from 'lucide-react';
 import { User } from '../types';
+import { UserProfileModal } from './UserProfileModal';
 
 interface NetworkDashboardProps {
   currentUser: User;
@@ -67,6 +68,14 @@ export const NetworkDashboard: React.FC<NetworkDashboardProps> = ({ currentUser 
   const [messages, setMessages] = useState<Message[]>([]);
   const [messageInput, setMessageInput] = useState('');
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+
+  // Profile modal state
+  const [viewProfileUser, setViewProfileUser] = useState<User | null>(null);
+
+  // User search states
+  const [discoverSearchQuery, setDiscoverSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   useEffect(() => {
     fetchNetworkData();
@@ -193,6 +202,29 @@ export const NetworkDashboard: React.FC<NetworkDashboardProps> = ({ currentUser 
   const handleSelectConversation = (partnerId: string) => {
     setSelectedConversation(partnerId);
     loadMessages(partnerId);
+  };
+
+  // Search users in Discover tab
+  const handleSearchUsers = async (query: string) => {
+    setDiscoverSearchQuery(query);
+    
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const res = await fetch(`/api/network/search?query=${encodeURIComponent(query)}&userId=${currentUser.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSearchResults(data.users || []);
+      }
+    } catch (err) {
+      console.error('User search failed:', err);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   const filteredSuggestions = suggestions.filter(s =>
@@ -378,16 +410,16 @@ export const NetworkDashboard: React.FC<NetworkDashboardProps> = ({ currentUser 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {filteredSuggestions.map((suggestion) => (
                   <div key={suggestion.user.id} className="border border-slate-200 rounded-xl p-5 hover:border-blue-200 hover:shadow-sm transition">
-                    <div className="flex items-start gap-3 mb-3">
+                    <div className="flex items-start gap-3 mb-3 cursor-pointer group" onClick={() => setViewProfileUser(suggestion.user)}>
                       {suggestion.user.avatarUrl ? (
-                        <img src={suggestion.user.avatarUrl} alt={suggestion.user.fullName} className="h-14 w-14 rounded-lg object-cover" />
+                        <img src={suggestion.user.avatarUrl} alt={suggestion.user.fullName} className="h-14 w-14 rounded-lg object-cover group-hover:opacity-90 transition" />
                       ) : (
-                        <div className="h-14 w-14 rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 text-blue-600 flex items-center justify-center font-bold text-lg">
+                        <div className="h-14 w-14 rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 text-blue-600 flex items-center justify-center font-bold text-lg group-hover:opacity-90 transition">
                           {suggestion.user.fullName.charAt(0)}
                         </div>
                       )}
                       <div className="flex-1">
-                        <h4 className="font-bold text-slate-900">{suggestion.user.fullName}</h4>
+                        <h4 className="font-bold text-slate-900 group-hover:text-blue-600 transition">{suggestion.user.fullName}</h4>
                         <p className="text-sm text-slate-600">{suggestion.user.title || 'Kullanıcı'}</p>
                         <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
                           <MapPin className="h-3 w-3" />
@@ -466,16 +498,16 @@ export const NetworkDashboard: React.FC<NetworkDashboardProps> = ({ currentUser 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredConnections.map((conn) => (
                 <div key={conn.connection.id} className="border border-slate-200 rounded-xl p-4 hover:border-blue-200 hover:shadow-sm transition">
-                  <div className="flex items-center gap-3 mb-3">
+                  <div className="flex items-center gap-3 mb-3 cursor-pointer group" onClick={() => setViewProfileUser(conn.user)}>
                     {conn.user.avatarUrl ? (
-                      <img src={conn.user.avatarUrl} alt={conn.user.fullName} className="h-12 w-12 rounded-lg object-cover" />
+                      <img src={conn.user.avatarUrl} alt={conn.user.fullName} className="h-12 w-12 rounded-lg object-cover group-hover:opacity-90 transition" />
                     ) : (
-                      <div className="h-12 w-12 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                      <div className="h-12 w-12 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold group-hover:opacity-90 transition">
                         {conn.user.fullName.charAt(0)}
                       </div>
                     )}
                     <div className="flex-1">
-                      <h4 className="font-semibold text-slate-900 text-sm">{conn.user.fullName}</h4>
+                      <h4 className="font-semibold text-slate-900 text-sm group-hover:text-blue-600 transition">{conn.user.fullName}</h4>
                       <p className="text-xs text-slate-600">{conn.user.title || 'Kullanıcı'}</p>
                     </div>
                   </div>
@@ -729,16 +761,16 @@ export const NetworkDashboard: React.FC<NetworkDashboardProps> = ({ currentUser 
               <div className="space-y-3">
                 {suggestions.slice(0, 3).map((suggestion) => (
                   <div key={suggestion.user.id} className="bg-white rounded-xl p-4 border border-slate-200">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setViewProfileUser(suggestion.user)}>
                       {suggestion.user.avatarUrl ? (
-                        <img src={suggestion.user.avatarUrl} alt={suggestion.user.fullName} className="h-12 w-12 rounded-lg object-cover" />
+                        <img src={suggestion.user.avatarUrl} alt={suggestion.user.fullName} className="h-12 w-12 rounded-lg object-cover group-hover:opacity-90 transition" />
                       ) : (
-                        <div className="h-12 w-12 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center font-bold">
+                        <div className="h-12 w-12 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center font-bold group-hover:opacity-90 transition">
                           {suggestion.user.fullName.charAt(0)}
                         </div>
                       )}
                       <div className="flex-1">
-                        <p className="font-semibold text-slate-900">{suggestion.user.fullName}</p>
+                        <p className="font-semibold text-slate-900 group-hover:text-blue-600 transition">{suggestion.user.fullName}</p>
                         <p className="text-sm text-slate-600">{suggestion.user.title}</p>
                         <p className="text-xs text-purple-600 font-semibold mt-1">
                           🎯 {suggestion.matchScore}% eşleşme
@@ -795,6 +827,10 @@ export const NetworkDashboard: React.FC<NetworkDashboardProps> = ({ currentUser 
         )}
 
       </div>
+      
+      {viewProfileUser && (
+        <UserProfileModal user={viewProfileUser} onClose={() => setViewProfileUser(null)} />
+      )}
     </div>
   );
 };

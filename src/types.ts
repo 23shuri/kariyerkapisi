@@ -13,13 +13,109 @@ export interface User {
   resumeFileName?: string;
   profileStrength?: number;
   avatarUrl?: string;
-  // İşveren alanları
-  companyName?: string;
-  companySize?: string;
-  companySector?: string;
-  companyDescription?: string;
-  companyWebsite?: string;
-  companyCity?: string;
+  coverPhotoUrl?: string;
+  bio?: string;
+  phone?: string;
+  birthDate?: string;
+  workStatus?: 'actively_looking' | 'employed' | 'open_to_offers' | 'not_looking';
+  salaryExpectation?: string;
+  workPreference?: 'remote' | 'hybrid' | 'office' | 'flexible';
+  linkedinUrl?: string;
+  githubUrl?: string;
+  portfolioUrl?: string;
+  education?: EducationEntry[];
+  experience?: ExperienceEntry[];
+  languages?: LanguageEntry[];
+  certificates?: CertificateEntry[];
+  projects?: ProjectEntry[];
+}
+
+export interface EducationEntry {
+  id: string;
+  school: string;
+  degree: string;
+  field: string;
+  startDate: string;
+  endDate?: string;
+  current?: boolean;
+  description?: string;
+}
+
+export interface ExperienceEntry {
+  id: string;
+  company: string;
+  position: string;
+  location?: string;
+  startDate: string;
+  endDate?: string;
+  current?: boolean;
+  description?: string;
+}
+
+export interface LanguageEntry {
+  id: string;
+  language: string;
+  level: 'beginner' | 'intermediate' | 'advanced' | 'native';
+}
+
+export interface CertificateEntry {
+  id: string;
+  name: string;
+  issuer: string;
+  category: CertificateCategory;
+  issueDate: string;
+  expiryDate?: string;
+  credentialId?: string;
+  credentialUrl?: string;
+  description?: string;
+  fileUrl?: string; // PDF or image
+  fileType?: 'pdf' | 'image';
+  verified?: boolean;
+}
+
+export type CertificateCategory = 
+  | 'software_development'
+  | 'ai_ml'
+  | 'data_science'
+  | 'cybersecurity'
+  | 'cloud'
+  | 'networking'
+  | 'mobile_development'
+  | 'web_development'
+  | 'design'
+  | 'project_management'
+  | 'office_software'
+  | 'digital_marketing'
+  | 'language'
+  | 'other';
+
+export const CERTIFICATE_CATEGORIES: Record<CertificateCategory, string> = {
+  software_development: 'Yazılım Geliştirme',
+  ai_ml: 'Yapay Zeka & ML',
+  data_science: 'Veri Bilimi',
+  cybersecurity: 'Siber Güvenlik',
+  cloud: 'Bulut Teknolojileri',
+  networking: 'Ağ Sistemleri',
+  mobile_development: 'Mobil Geliştirme',
+  web_development: 'Web Geliştirme',
+  design: 'Tasarım',
+  project_management: 'Proje Yönetimi',
+  office_software: 'Ofis Programları',
+  digital_marketing: 'Dijital Pazarlama',
+  language: 'Yabancı Dil',
+  other: 'Diğer'
+};
+
+export interface ProjectEntry {
+  id: string;
+  name: string;
+  description: string;
+  role?: string;
+  technologies?: string[];
+  startDate?: string;
+  endDate?: string;
+  url?: string;
+  imageUrl?: string;
 }
 
 export interface Job {
