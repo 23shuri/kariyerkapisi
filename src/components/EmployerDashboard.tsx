@@ -308,10 +308,6 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
                   <span className="text-[10px] text-slate-400">Şirket bilgileri henüz eklenmedi</span>
                 )}
               </div>
-            )}
-            <div>
-              <h3 className="font-display text-base font-bold text-slate-900">{currentUser.fullName}</h3>
-              <p className="text-xs text-slate-400 font-medium">İşveren Hesabı</p>
             </div>
           </div>
           <button
