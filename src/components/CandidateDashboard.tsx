@@ -434,7 +434,7 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
             <div className="flex items-center space-x-4 mb-5">
               {currentUser.avatarUrl ? (
                 <img 
-                  src={currentUser.avatarUrl} 
+                  src={currentUser.avatarUrl.startsWith('http') ? currentUser.avatarUrl : `http://127.0.0.1:5001${currentUser.avatarUrl}`}
                   alt={currentUser.fullName} 
                   className="h-14 w-14 rounded-2xl object-cover ring-2 ring-emerald-50"
                   referrerPolicy="no-referrer"

@@ -159,7 +159,7 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   {currentUser.avatarUrl ? (
                     <img 
-                      src={currentUser.avatarUrl} 
+                      src={currentUser.avatarUrl.startsWith('http') ? currentUser.avatarUrl : `http://127.0.0.1:5001${currentUser.avatarUrl}`}
                       alt={currentUser.fullName} 
                       className="h-8 w-8 rounded-lg object-cover"
                     />
