@@ -201,7 +201,7 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
                   <div className="relative group">
                     {user.avatarUrl ? (
                       <img
-                        src={user.avatarUrl}
+                        src={user.avatarUrl.startsWith('http') ? user.avatarUrl : `http://127.0.0.1:5001${user.avatarUrl}`}
                         alt={user.fullName}
                         className="h-32 w-32 rounded-2xl border-4 border-white object-cover shadow-lg"
                       />
@@ -907,7 +907,7 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
           <div className="flex justify-center mb-6">
             {user?.avatarUrl ? (
               <img
-                src={user.avatarUrl}
+                src={user.avatarUrl.startsWith('http') ? user.avatarUrl : `http://127.0.0.1:5001${user.avatarUrl}`}
                 alt="Mevcut fotoğraf"
                 className="h-28 w-28 rounded-2xl object-cover border-4 border-slate-200 shadow"
               />

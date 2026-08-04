@@ -16,6 +16,7 @@ interface ProfileWizardProps {
 export const ProfileWizard: React.FC<ProfileWizardProps> = ({ currentUser, onComplete, onClose }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [profileData, setProfileData] = useState<UserType>({
     ...currentUser,
     education: currentUser.education || [],
@@ -58,25 +59,53 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({ currentUser, onCom
         body: JSON.stringify(profileData)
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      const text = await response.text();
+      let data: any = null;
+      try { data = text ? JSON.parse(text) : null; } catch { /* ignore */ }
+
+      if (response.ok && data?.user) {
         onComplete(data.user);
+      } else {
+        // Hata olsa bile local state ile devam et
+        onComplete(profileData);
       }
     } catch (err) {
       console.error('Profile save error:', err);
+      onComplete(profileData);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileData({ ...profileData, avatarUrl: reader.result as string });
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    // Önce önizleme için base64
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setProfileData(prev => ({ ...prev, avatarUrl: reader.result as string }));
+    };
+    reader.readAsDataURL(file);
+
+    // Sonra gerçek upload
+    setIsUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append('photo', file);
+      formData.append('userId', currentUser.id);
+      const res = await fetch('/api/user/upload-photo', { method: 'POST', body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        const url = data.avatarUrl || data.avatar_url;
+        if (url) {
+          setProfileData(prev => ({ ...prev, avatarUrl: url }));
+        }
+      }
+    } catch (err) {
+      console.error('Avatar upload error:', err);
+    } finally {
+      setIsUploadingPhoto(false);
     }
   };
 
@@ -179,20 +208,33 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({ currentUser, onCom
             <div className="flex items-center gap-4 mb-6">
               <div className="relative">
                 {profileData.avatarUrl ? (
-                  <img src={profileData.avatarUrl} alt="Profil" className="h-20 w-20 rounded-full object-cover ring-2 ring-emerald-200" />
+                  <img
+                    src={profileData.avatarUrl.startsWith('data:') ? profileData.avatarUrl : `http://127.0.0.1:5001${profileData.avatarUrl}`}
+                    alt="Profil"
+                    className="h-20 w-20 rounded-full object-cover ring-2 ring-emerald-200"
+                  />
                 ) : (
                   <div className="h-20 w-20 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-2xl font-bold">
                     {profileData.fullName.charAt(0).toUpperCase()}
                   </div>
                 )}
                 <label className="absolute -bottom-1 -right-1 bg-emerald-600 text-white p-2 rounded-full cursor-pointer hover:bg-emerald-700 transition">
-                  <Upload className="h-3 w-3" />
-                  <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
+                  {isUploadingPhoto ? (
+                    <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                    </svg>
+                  ) : (
+                    <Upload className="h-3 w-3" />
+                  )}
+                  <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" disabled={isUploadingPhoto} />
                 </label>
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-900">Profil Fotoğrafı</p>
-                <p className="text-xs text-slate-500">Profesyonel bir fotoğraf yükleyin</p>
+                <p className="text-xs text-slate-500">
+                  {isUploadingPhoto ? 'Yükleniyor...' : 'Profesyonel bir fotoğraf yükleyin'}
+                </p>
               </div>
             </div>
 
