@@ -3,7 +3,7 @@ import json
 import time
 from datetime import datetime
 from urllib.parse import quote_plus
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
@@ -1201,6 +1201,63 @@ def get_user_details(user_id):
         }
     })
 
+# 17b. Upload Profile Photo
+@app.route('/api/user/upload-photo', methods=['POST'])
+def upload_profile_photo():
+    import uuid
+    from werkzeug.utils import secure_filename
+
+    user_id = request.form.get('userId')
+    if not user_id:
+        return jsonify({'error': 'userId gerekli.'}), 400
+
+    user = UserModel.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'Kullanıcı bulunamadı.'}), 404
+
+    if 'photo' not in request.files:
+        return jsonify({'error': 'Fotoğraf dosyası eksik.'}), 400
+
+    file = request.files['photo']
+    if file.filename == '':
+        return jsonify({'error': 'Dosya seçilmedi.'}), 400
+
+    allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    if ext not in allowed_extensions:
+        return jsonify({'error': 'Geçersiz dosya türü. PNG, JPG veya GIF kullanın.'}), 400
+
+    # Max 5MB
+    file.seek(0, 2)
+    file_size = file.tell()
+    file.seek(0)
+    if file_size > 5 * 1024 * 1024:
+        return jsonify({'error': 'Dosya boyutu 5 MB\'yi geçemez.'}), 400
+
+    upload_folder = os.path.join(os.path.dirname(__file__), 'uploads', 'avatars')
+    os.makedirs(upload_folder, exist_ok=True)
+
+    filename = f"{user_id}_{uuid.uuid4().hex[:8]}.{ext}"
+    filepath = os.path.join(upload_folder, filename)
+    file.save(filepath)
+
+    avatar_url = f"/uploads/avatars/{filename}"
+    user.avatar_url = avatar_url
+    db.session.commit()
+
+    return jsonify({'avatarUrl': avatar_url, 'message': 'Fotoğraf başarıyla yüklendi.'})
+
+# 17c. Increment profile view count
+@app.route('/api/user/<user_id>/view', methods=['POST'])
+def increment_profile_view(user_id):
+    user = UserModel.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'Kullanıcı bulunamadı.'}), 404
+    current_views = user.profile_views or 0
+    user.profile_views = current_views + 1
+    db.session.commit()
+    return jsonify({'profileViews': user.profile_views})
+
 # 17. Application: Accept/Reject (Employer)
 @app.route('/api/applications/<app_id>/decision', methods=['PATCH'])
 def application_decision(app_id):
@@ -2025,3 +2082,9 @@ def search_users():
     ).limit(20).all()
     
     return jsonify({'users': [u.to_dict() for u in users]})
+
+# Serve uploaded files (avatars etc.)
+@app.route('/uploads/avatars/<path:filename>')
+def serve_avatar(filename):
+    upload_folder = os.path.join(os.path.dirname(__file__), 'uploads', 'avatars')
+    return send_from_directory(upload_folder, filename)

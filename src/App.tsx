@@ -10,7 +10,9 @@ import { SavedJobsPage } from './components/SavedJobsPage';
 import { NotificationPanel } from './components/NotificationPanel';
 import { JobListPage } from './components/JobListPage';
 import { JobDetailPage } from './components/JobDetailPage';
+import { PublicProfilePage } from './components/PublicProfilePage';
 import { User, Role, Notification, Job } from './types';
+import { Bell } from 'lucide-react';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -19,10 +21,10 @@ export default function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [activeTab, setActiveTab] = useState<'home' | 'applications'>('home');
-  const [activeMainView, setActiveMainView] = useState<'dashboard' | 'network'>('dashboard');
-  const [activeView, setActiveView] = useState<'main' | 'savedJobs' | 'notifications' | 'jobList' | 'jobDetail'>('main');
+  const [activeMainView, setActiveMainView] = useState<'home' | 'applications' | 'network' | 'profile'>('home');
+  const [activeView, setActiveView] = useState<'main' | 'savedJobs' | 'notifications' | 'jobList' | 'jobDetail' | 'profile'>('main');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [viewingProfileUserId, setViewingProfileUserId] = useState<string | null>(null);
 
   // Load user session on startup
   useEffect(() => {
@@ -97,8 +99,7 @@ export default function App() {
     // İlan sayfasındaysa orada kal, değilse dashboard'a yönlendir
     if (activeView !== 'jobList' && activeView !== 'jobDetail') {
       setActiveView('main');
-      setActiveMainView('dashboard');
-      setActiveTab('home');
+      setActiveMainView('home');
     }
   };
 
@@ -107,8 +108,7 @@ export default function App() {
     localStorage.removeItem('kariyer_kapisi_session');
     // Çıkış yapınca ana sayfaya dön
     setActiveView('main');
-    setActiveMainView('dashboard');
-    setActiveTab('home');
+    setActiveMainView('home');
   };
 
   const handleOpenAuth = (role: Role) => {
@@ -123,17 +123,36 @@ export default function App() {
 
   const handleNavigateToSavedJobs = () => {
     setActiveView('savedJobs');
+    setShowNotifications(false);
+  };
+
+  const handleNavigateToNotifications = () => {
+    setActiveView('notifications');
+    setShowNotifications(false);
+  };
+
+  const handleNavigateToProfile = () => {
+    if (currentUser) {
+      setViewingProfileUserId(currentUser.id);
+      setActiveView('profile');
+      setActiveMainView('profile');
+    }
+  };
+
+  const handleViewProfile = (userId: string) => {
+    setViewingProfileUserId(userId);
+    setActiveView('profile');
+    setActiveMainView('profile');
   };
 
   // Herhangi bir dashboard sekmesine geçilince activeView'i 'main'e sıfırla
-  const handleMainViewChange = (view: 'dashboard' | 'network') => {
+  const handleMainViewChange = (view: 'home' | 'applications' | 'network' | 'profile') => {
     setActiveView('main');
     setActiveMainView(view);
-  };
-
-  const handleTabChange = (tab: 'home' | 'applications') => {
-    setActiveView('main');
-    setActiveTab(tab);
+    
+    if (view === 'profile') {
+      handleNavigateToProfile();
+    }
   };
 
   const handleViewJobList = () => {
@@ -158,20 +177,88 @@ export default function App() {
         currentUser={currentUser} 
         onLogout={handleLogout} 
         onOpenAuth={handleOpenAuth}
-        onOpenNotifications={() => setShowNotifications(!showNotifications)}
+        onOpenNotifications={handleNavigateToNotifications}
         onNavigateToSavedJobs={handleNavigateToSavedJobs}
-        onViewJobs={handleViewJobList}
+        onNavigateToProfile={handleNavigateToProfile}
         activeView={activeView}
         unreadCount={unreadCount}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
         activeMainView={activeMainView}
         onMainViewChange={handleMainViewChange}
       />
 
       {/* Main Content Area */}
       <main className="flex-1">
-        {activeView === 'savedJobs' && currentUser ? (
+        {activeView === 'profile' && viewingProfileUserId ? (
+          <PublicProfilePage 
+            userId={viewingProfileUserId}
+            currentUser={currentUser}
+            onProfileUpdated={handleProfileUpdated}
+            onBack={() => {
+              setActiveView('main');
+              setActiveMainView('home');
+              setViewingProfileUserId(null);
+            }}
+          />
+        ) : activeView === 'notifications' && currentUser ? (
+          <div className="min-h-screen bg-slate-50 py-8">
+            <div className="max-w-4xl mx-auto px-4">
+              <button 
+                onClick={() => setActiveView('main')}
+                className="mb-4 text-sm text-slate-600 hover:text-slate-900 flex items-center gap-2"
+              >
+                ← Geri
+              </button>
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-slate-900">Bildirimler</h2>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAllAsRead}
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Tümünü Okundu İşaretle
+                    </button>
+                  )}
+                </div>
+                {notifications.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Bell className="h-16 w-16 text-slate-300 mx-auto mb-4" />
+                    <p className="text-slate-600 font-semibold">Henüz bildirim yok</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {notifications.map((notif) => (
+                      <div
+                        key={notif.id}
+                        className={`p-4 rounded-xl border transition ${
+                          notif.isRead
+                            ? 'bg-slate-50 border-slate-200'
+                            : 'bg-blue-50 border-blue-200'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-slate-900">{notif.title}</h3>
+                            <p className="text-sm text-slate-600 mt-1">{notif.message}</p>
+                            <p className="text-xs text-slate-500 mt-2">{notif.createdAt}</p>
+                          </div>
+                          {!notif.isRead && (
+                            <button
+                              onClick={() => handleMarkAsRead(notif.id)}
+                              className="text-xs text-blue-600 hover:text-blue-700"
+                            >
+                              Okundu
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : activeView === 'savedJobs' && currentUser ? (
           <SavedJobsPage 
             currentUser={currentUser} 
             onBack={() => setActiveView('main')} 
@@ -211,12 +298,18 @@ export default function App() {
           currentUser.role === 'admin' ? (
             <AdminDashboard currentUser={currentUser} />
           ) : activeMainView === 'network' ? (
-            <NetworkDashboard currentUser={currentUser} />
+            <NetworkDashboard currentUser={currentUser} onViewProfile={handleViewProfile} />
+          ) : activeMainView === 'applications' && currentUser.role === 'candidate' ? (
+            <CandidateDashboard 
+              currentUser={currentUser} 
+              onProfileUpdated={handleProfileUpdated}
+              activeTab="applications"
+            />
           ) : currentUser.role === 'candidate' ? (
             <CandidateDashboard 
               currentUser={currentUser} 
               onProfileUpdated={handleProfileUpdated}
-              activeTab={activeTab}
+              activeTab="home"
             />
           ) : (
             <EmployerDashboard 
@@ -279,15 +372,6 @@ export default function App() {
           onSuccess={handleLoginSuccess} 
         />
       )}
-
-      {/* Notification Panel */}
-      <NotificationPanel
-        isOpen={showNotifications}
-        onClose={() => setShowNotifications(false)}
-        notifications={notifications}
-        onMarkAsRead={handleMarkAsRead}
-        onMarkAllAsRead={handleMarkAllAsRead}
-      />
     </div>
   );
 }
