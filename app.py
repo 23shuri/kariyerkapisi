@@ -1428,14 +1428,22 @@ def get_network_suggestions():
             reasons.append(f"{mutual_count} ortak bağlantı")
             match_score += mutual_count * 8
         
-        if reasons:  # Only suggest if there's at least one reason
-            suggestions.append({
-                'user': user.to_dict(),
-                'matchScore': min(match_score, 100),
-                'reasons': reasons,
-                'mutualConnections': mutual_count,
-                'extendedProfile': user_profile.to_dict() if user_profile else None
-            })
+        # If no specific AI reason found, provide a default discovery reason
+        if not reasons:
+            if user.role == 'employer':
+                reasons.append("Kariyer Kapısı bünyesinde İşveren")
+                match_score = 15
+            else:
+                reasons.append("Kariyer Kapısı yeni üyesi")
+                match_score = 10
+        
+        suggestions.append({
+            'user': user.to_dict(),
+            'matchScore': min(match_score, 100),
+            'reasons': reasons,
+            'mutualConnections': mutual_count,
+            'extendedProfile': user_profile.to_dict() if user_profile else None
+        })
     
     # Sort by match score
     suggestions.sort(key=lambda x: x['matchScore'], reverse=True)
