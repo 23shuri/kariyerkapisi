@@ -105,10 +105,17 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
       });
       const data = await res.json();
       if (res.ok && data.avatarUrl) {
+        // Local state güncelle
         setUser(prev => prev ? { ...prev, avatarUrl: data.avatarUrl } : prev);
-        if (onProfileUpdated && currentUser) {
-          onProfileUpdated({ ...currentUser, avatarUrl: data.avatarUrl });
+        
+        // Parent component'e bildir (Header avatar güncellensin)
+        if (onProfileUpdated && currentUser && currentUser.id === userId) {
+          const updatedUser = { ...currentUser, avatarUrl: data.avatarUrl };
+          onProfileUpdated(updatedUser);
+          // localStorage'ı da güncelle
+          localStorage.setItem('kariyer_kapisi_session', JSON.stringify(updatedUser));
         }
+        
         setShowPhotoUpload(false);
       } else {
         setPhotoUploadError(data.error || 'Fotoğraf yüklenirken hata oluştu.');

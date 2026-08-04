@@ -1205,33 +1205,48 @@ def get_user_details(user_id):
 @app.route('/api/user/upload-photo', methods=['POST'])
 def upload_profile_photo():
     import uuid
+    import base64
     from werkzeug.utils import secure_filename
 
-    user_id = request.form.get('userId')
+    # JSON body'den veri al
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'JSON body gerekli.'}), 400
+    
+    user_id = data.get('userId')
+    photo_base64 = data.get('photoBase64')
+    
     if not user_id:
         return jsonify({'error': 'userId gerekli.'}), 400
+    
+    if not photo_base64:
+        return jsonify({'error': 'photoBase64 gerekli.'}), 400
 
     user = UserModel.query.get(user_id)
     if not user:
         return jsonify({'error': 'Kullanıcı bulunamadı.'}), 404
 
-    if 'photo' not in request.files:
-        return jsonify({'error': 'Fotoğraf dosyası eksik.'}), 400
+    # Base64'ü decode et
+    try:
+        # "data:image/png;base64,..." formatından sadece base64 kısmını al
+        if ',' in photo_base64:
+            header, photo_base64 = photo_base64.split(',', 1)
+            # Header'dan format çıkar (image/png, image/jpeg, etc.)
+            if 'image/' in header:
+                ext = header.split('image/')[-1].split(';')[0].lower()
+                if ext == 'jpeg':
+                    ext = 'jpg'
+            else:
+                ext = 'png'
+        else:
+            ext = 'png'
+        
+        photo_data = base64.b64decode(photo_base64)
+    except Exception as e:
+        return jsonify({'error': f'Base64 decode hatası: {str(e)}'}), 400
 
-    file = request.files['photo']
-    if file.filename == '':
-        return jsonify({'error': 'Dosya seçilmedi.'}), 400
-
-    allowed_extensions = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
-    if ext not in allowed_extensions:
-        return jsonify({'error': 'Geçersiz dosya türü. PNG, JPG veya GIF kullanın.'}), 400
-
-    # Max 5MB
-    file.seek(0, 2)
-    file_size = file.tell()
-    file.seek(0)
-    if file_size > 5 * 1024 * 1024:
+    # Boyut kontrolü (5MB)
+    if len(photo_data) > 5 * 1024 * 1024:
         return jsonify({'error': 'Dosya boyutu 5 MB\'yi geçemez.'}), 400
 
     upload_folder = os.path.join(os.path.dirname(__file__), 'uploads', 'avatars')
@@ -1239,7 +1254,9 @@ def upload_profile_photo():
 
     filename = f"{user_id}_{uuid.uuid4().hex[:8]}.{ext}"
     filepath = os.path.join(upload_folder, filename)
-    file.save(filepath)
+    
+    with open(filepath, 'wb') as f:
+        f.write(photo_data)
 
     avatar_url = f"/uploads/avatars/{filename}"
     user.avatar_url = avatar_url
@@ -2092,7 +2109,23 @@ def search_users():
     return jsonify({'users': [u.to_dict() for u in users]})
 
 # Serve uploaded files (avatars etc.)
-@app.route('/uploads/avatars/<path:filename>')
+@app.route('/uploads/avatars/<filename>')
 def serve_avatar(filename):
-    upload_folder = os.path.join(os.path.dirname(__file__), 'uploads', 'avatars')
-    return send_from_directory(upload_folder, filename)
+    try:
+        upload_folder = os.path.join(os.path.dirname(__file__), 'uploads', 'avatars')
+        print(f"[AVATAR] Request for: {filename}")
+        print(f"[AVATAR] Directory: {upload_folder}")
+        print(f"[AVATAR] Directory exists: {os.path.exists(upload_folder)}")
+        
+        file_path = os.path.join(upload_folder, filename)
+        print(f"[AVATAR] Full path: {file_path}")
+        print(f"[AVATAR] File exists: {os.path.exists(file_path)}")
+        
+        if not os.path.exists(file_path):
+            print(f"[AVATAR] ERROR: File not found!")
+            return jsonify({'error': 'File not found'}), 404
+            
+        return send_from_directory(upload_folder, filename)
+    except Exception as e:
+        print(f"[AVATAR] Exception: {e}")
+        return jsonify({'error': str(e)}), 500

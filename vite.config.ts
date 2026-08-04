@@ -14,7 +14,18 @@ export default defineConfig(() => {
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
-      // Proxy YOK — API istekleri server.ts üzerinden (port 3000) Vite middleware ile karşılanıyor
+      proxy: {
+        '/api': {
+          target: 'http://127.0.0.1:5001',
+          changeOrigin: true,
+          secure: false,
+        },
+        '/uploads': {
+          target: 'http://127.0.0.1:5001',
+          changeOrigin: true,
+          secure: false,
+        },
+      },
     },
   };
 });
