@@ -40,6 +40,7 @@ let users: User[] = [...INITIAL_USERS];
 let jobs: Job[] = [...INITIAL_JOBS];
 let applications: Application[] = [...INITIAL_APPLICATIONS];
 let matchDetails: Record<string, MatchDetail> = { ...INITIAL_MATCH_DETAILS };
+let notifications: { id: string; userId: string; title: string; message: string; type: string; isRead: boolean; createdAt: string; relatedJobId?: string }[] = [];
 
 const storageService = getStorageService();
 
@@ -110,24 +111,79 @@ app.post('/api/auth/register', (req, res) => {
   return res.status(201).json({ user: newUser });
 });
 
-// 3. Jobs Endpoint: Get all
+// 3. Jobs Endpoint: Get all (with optional preview match scores)
 app.get('/api/jobs', (req, res) => {
-  return res.json({ jobs });
+  const userId = req.query.userId as string | undefined;
+
+  if (!userId) {
+    // Giriş yapılmamış — skor olmadan döndür
+    return res.json({ jobs });
+  }
+
+  // Kullanıcıyı bul
+  let candidate = users.find(u => u.id === userId);
+
+  // Bellekte yoksa (sunucu restart) — session bilgisi query'den alınabilir
+  if (!candidate) {
+    return res.json({ jobs });
+  }
+
+  const cvText = candidate.resumeText || `${candidate.fullName}\nSkills: ${candidate.skills?.join(', ') || ''}`;
+
+  // Her ilan için hızlı heuristic skor hesapla
+  const jobsWithScore = jobs.map(job => {
+    const match = calculateHeuristicMatch(cvText, job.description, job.skills);
+    return {
+      ...job,
+      previewMatchScore: match.matchScore,
+      previewSkillAlignment: match.skillAlignment,
+    };
+  });
+
+  // Skora göre büyükten küçüğe sırala
+  jobsWithScore.sort((a, b) => b.previewMatchScore - a.previewMatchScore);
+
+  return res.json({ jobs: jobsWithScore });
 });
 
 // 4. Jobs Endpoint: Create job (Employer)
 app.post('/api/jobs', (req, res) => {
   console.log('[Jobs] Received data:', req.body);
-  const { title, company, location, type, skills, experienceLevel, description, salaryRange } = req.body;
+  const { 
+    title, company, location, type, skills, experienceLevel, description, salaryRange,
+    employerId,
+    companySector, companySize, companyCity, companyWebsite, companyDescription, companyAvatarUrl
+  } = req.body;
   if (!title || !company || !location || !type || !description) {
     console.log('[Jobs] Validation failed:', { title, company, location, type, description });
     return res.status(400).json({ error: 'Gerekli ilan detayları eksik.' });
+  }
+
+  // Eğer employerId varsa kullanıcıdan güncel şirket bilgilerini çek
+  let resolvedSector = companySector;
+  let resolvedSize = companySize;
+  let resolvedCity = companyCity;
+  let resolvedWebsite = companyWebsite;
+  let resolvedDesc = companyDescription;
+  let resolvedAvatar = companyAvatarUrl;
+
+  if (employerId) {
+    const employer = users.find(u => u.id === employerId);
+    if (employer) {
+      resolvedSector = resolvedSector || (employer as any).companySector;
+      resolvedSize   = resolvedSize   || (employer as any).companySize;
+      resolvedCity   = resolvedCity   || (employer as any).companyCity;
+      resolvedWebsite = resolvedWebsite || (employer as any).companyWebsite;
+      resolvedDesc   = resolvedDesc   || (employer as any).companyDescription;
+      resolvedAvatar = resolvedAvatar || employer.avatarUrl;
+    }
   }
 
   const newJob: Job = {
     id: `job_${Date.now()}`,
     title,
     company,
+    employerId: employerId || '',
     location,
     type,
     skills: Array.isArray(skills) ? skills : [],
@@ -137,10 +193,16 @@ app.post('/api/jobs', (req, res) => {
     postedAt: 'Yeni',
     applicationCount: 0,
     candidateMatchesCount: 0,
+    companySector: resolvedSector || '',
+    companySize: resolvedSize || '',
+    companyCity: resolvedCity || '',
+    companyWebsite: resolvedWebsite || '',
+    companyDescription: resolvedDesc || '',
+    companyAvatarUrl: resolvedAvatar || '',
   };
 
   jobs.unshift(newJob);
-  console.log('[Jobs] Job created:', newJob.id);
+  console.log('[Jobs] Job created:', newJob.id, '| Sector:', newJob.companySector);
   return res.status(201).json({ job: newJob });
 });
 
@@ -456,6 +518,44 @@ app.patch('/api/applications/:id/status', (req, res) => {
   return res.json({ application: applications[appIndex] });
 });
 
+// 9b. Application Decision Endpoint (Employer) — Kabul Et / Reddet
+app.patch('/api/applications/:id/decision', (req, res) => {
+  const { id } = req.params;
+  const { decision } = req.body; // 'accept' | 'reject'
+
+  if (!decision || !['accept', 'reject'].includes(decision)) {
+    return res.status(400).json({ error: 'Geçerli bir karar belirtiniz: accept veya reject.' });
+  }
+
+  const appIndex = applications.findIndex((a) => a.id === id);
+  if (appIndex === -1) {
+    return res.status(404).json({ error: 'Başvuru bulunamadı.' });
+  }
+
+  const newStatus = decision === 'accept' ? 'Kabul Edildi' : 'Reddedildi';
+  applications[appIndex].status = newStatus;
+
+  const app = applications[appIndex];
+  console.log(`[Decision] Application ${id} → ${newStatus} (candidate: ${app.candidateId})`);
+
+  // Adaya bildirim ekle
+  const notif = {
+    id: `notif_${Date.now()}`,
+    userId: app.candidateId,
+    title: decision === 'accept' ? '🎉 Başvurunuz Kabul Edildi!' : 'Başvuru Sonucu',
+    message: decision === 'accept'
+      ? `Tebrikler! Başvurunuz değerlendirildi ve kabul edildi.`
+      : `Başvurunuz değerlendirildi. Bu sefer uygun görülmedi, başarılar dileriz.`,
+    type: decision === 'accept' ? 'success' : 'info',
+    isRead: false,
+    createdAt: new Date().toISOString(),
+    relatedJobId: app.jobId,
+  };
+  (notifications as any[]).push(notif);
+
+  return res.json({ application: applications[appIndex], notification: notif });
+});
+
 // 10. CV Parser Endpoint: Upload & Extract info with Gemini
 app.post('/api/parse-cv', async (req, res) => {
   const { fileName, fileBase64, customText } = req.body;
@@ -622,13 +722,142 @@ app.get('/api/stats/employer', (req, res) => {
   });
 });
 
+// 12b. Company Profile Endpoint — herkese açık şirket profili
+app.get('/api/company/:employerId', (req, res) => {
+  const { employerId } = req.params;
+  const employer = users.find(u => u.id === employerId && u.role === 'employer');
+
+  if (!employer) {
+    return res.status(404).json({ error: 'Şirket bulunamadı.' });
+  }
+
+  const u = employer as any;
+
+  // Şirkete ait ilanlar
+  const companyJobs = jobs.filter(j => j.employerId === employerId || j.company === (u.companyName || employer.fullName));
+
+  // Şirket değerlendirmeleri
+  const companyReviews = (reviews as any[]).filter(r => r.employerId === employerId);
+  const avgRating = companyReviews.length > 0
+    ? Math.round((companyReviews.reduce((s: number, r: any) => s + r.rating, 0) / companyReviews.length) * 10) / 10
+    : 0;
+
+  const profile = {
+    employerId,
+    companyName: u.companyName || employer.fullName,
+    companySector: u.companySector || '',
+    companySize: u.companySize || '',
+    companyCity: u.companyCity || '',
+    companyWebsite: u.companyWebsite || '',
+    companyDescription: u.companyDescription || '',
+    companyAvatarUrl: employer.avatarUrl || '',
+    companyFoundedYear: u.companyFoundedYear || '',
+    companyEmail: u.companyEmail || '',
+    companyPhone: u.companyPhone || '',
+    companyBenefits: u.companyBenefits || [],
+    companyValues: u.companyValues || [],
+    avgRating,
+    totalReviews: companyReviews.length,
+    jobs: companyJobs,
+  };
+
+  return res.json({ profile });
+});
+
+// 12c. Company arama — şirket adına göre
+app.get('/api/company/search/:companyName', (req, res) => {
+  const name = decodeURIComponent(req.params.companyName).toLowerCase().trim();
+
+  // Önce kayıtlı employer'da ara (kısmi eşleşme)
+  const employer = users.find(u =>
+    u.role === 'employer' &&
+    ((u as any).companyName?.toLowerCase().includes(name) ||
+      u.fullName.toLowerCase().includes(name))
+  );
+
+  if (employer) {
+    const u = employer as any;
+    const companyJobs = jobs.filter(j =>
+      j.employerId === employer.id || j.company === (u.companyName || employer.fullName)
+    );
+    const companyReviews = (reviews as any[]).filter(r => r.employerId === employer.id);
+    const avgRating = companyReviews.length > 0
+      ? Math.round((companyReviews.reduce((s: number, r: any) => s + r.rating, 0) / companyReviews.length) * 10) / 10
+      : 0;
+    return res.json({
+      profile: {
+        employerId: employer.id,
+        companyName: u.companyName || employer.fullName,
+        companySector: u.companySector || '',
+        companySize: u.companySize || '',
+        companyCity: u.companyCity || '',
+        companyWebsite: u.companyWebsite || '',
+        companyDescription: u.companyDescription || '',
+        companyAvatarUrl: employer.avatarUrl || '',
+        companyFoundedYear: u.companyFoundedYear || '',
+        companyEmail: u.companyEmail || '',
+        companyPhone: u.companyPhone || '',
+        companyBenefits: u.companyBenefits || [],
+        companyValues: u.companyValues || [],
+        avgRating,
+        totalReviews: companyReviews.length,
+        jobs: companyJobs,
+      }
+    });
+  }
+
+  // Employer kaydı yoksa — ilanlardan şirket bilgisi çek (kısmi eşleşme)
+  const job = jobs.find(j => j.company.toLowerCase().includes(name) || name.includes(j.company.toLowerCase()));
+  if (job) {
+    return res.json({
+      profile: {
+        employerId: job.employerId || '',
+        companyName: job.company,
+        companySector: job.companySector || '',
+        companySize: job.companySize || '',
+        companyCity: job.companyCity || job.location,
+        companyWebsite: job.companyWebsite || '',
+        companyDescription: job.companyDescription || '',
+        companyAvatarUrl: job.companyAvatarUrl || '',
+        companyFoundedYear: '',
+        companyEmail: '',
+        companyPhone: '',
+        companyBenefits: [],
+        companyValues: [],
+        avgRating: 0,
+        totalReviews: 0,
+        jobs: jobs.filter(j2 => j2.company === job.company),
+      }
+    });
+  }
+
+  return res.status(404).json({ error: 'Şirket bulunamadı.' });
+});
+
 // 13. Notifications Endpoint
 app.get('/api/notifications', (req, res) => {
   const userId = req.query.userId as string;
   if (!userId) {
     return res.status(400).json({ error: 'Kullanıcı kimliği gereklidir.' });
   }
-  return res.json({ notifications: [], unreadCount: 0 });
+  const userNotifs = notifications.filter(n => n.userId === userId);
+  const unreadCount = userNotifs.filter(n => !n.isRead).length;
+  return res.json({ notifications: userNotifs.reverse(), unreadCount });
+});
+
+// 13b. Mark notification as read
+app.patch('/api/notifications/:notifId/read', (req, res) => {
+  const { notifId } = req.params;
+  const notif = notifications.find(n => n.id === notifId);
+  if (notif) notif.isRead = true;
+  return res.json({ success: true });
+});
+
+// 13c. Mark all notifications as read
+app.post('/api/notifications/read-all', (req, res) => {
+  const { userId } = req.body;
+  notifications.filter(n => n.userId === userId).forEach(n => { n.isRead = true; });
+  return res.json({ success: true });
 });
 
 // 14. Reviews Endpoints

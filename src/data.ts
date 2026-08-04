@@ -12,10 +12,15 @@ export const INITIAL_JOBS: Job[] = [
     skills: ['React', 'TypeScript', 'Tailwind CSS', 'GraphQL'],
     experienceLevel: '3-5 Yıl',
     description: 'Şirketimizin amiral gemisi web uygulamalarını modern teknolojilerle geliştirmek ve UI/UX standartlarımızı üst seviyeye çıkarmak üzere deneyimli bir Frontend Developer arıyoruz.',
-    salaryRange: 'Rekabetçi',
+    salaryRange: '35.000 - 55.000 ₺',
     postedAt: '3 gün önce',
     applicationCount: 0,
-    candidateMatchesCount: 0
+    candidateMatchesCount: 0,
+    companySector: 'Teknoloji',
+    companySize: '50-200 Çalışan',
+    companyCity: 'İstanbul',
+    companyWebsite: 'www.techcorp.com.tr',
+    companyDescription: 'TechCorp A.Ş., 2015 yılından bu yana Türkiye\'nin önde gelen yazılım şirketleri arasında yer almaktadır. Kurumsal ve KOBİ müşterilerine yönelik yenilikçi dijital çözümler geliştiriyoruz.',
   },
   {
     id: 'job_2',
@@ -26,10 +31,15 @@ export const INITIAL_JOBS: Job[] = [
     skills: ['Python', 'Machine Learning', 'SQL', 'Tableau'],
     experienceLevel: '2+ Yıl',
     description: 'Büyük veri analiz süreçlerimizi yönetecek, tahmine dayalı yapay zeka modelleri tasarlayacak ve bunları ürünlerimize entegre edecek bir Data Scientist arıyoruz.',
-    salaryRange: 'Rekabetçi',
+    salaryRange: '40.000 - 60.000 ₺',
     postedAt: '1 hafta önce',
     applicationCount: 0,
-    candidateMatchesCount: 0
+    candidateMatchesCount: 0,
+    companySector: 'Veri & Analitik',
+    companySize: '10-50 Çalışan',
+    companyCity: 'Ankara',
+    companyWebsite: 'www.dataminds.io',
+    companyDescription: 'DataMinds, yapay zeka ve makine öğrenmesi alanında uzmanlaşmış bir veri şirketidir. Müşterilerimize özel analitik çözümler ve tahminleme modelleri geliştiriyoruz.',
   },
   {
     id: 'job_3',
@@ -40,10 +50,15 @@ export const INITIAL_JOBS: Job[] = [
     skills: ['Node.js', 'React', 'PostgreSQL', 'Docker'],
     experienceLevel: '4+ Yıl',
     description: 'Finansal yazılım çözümlerimizin hem sunucu hem de istemci tarafındaki mimarilerini güçlendirecek, yüksek trafikli sistemlerde tecrübeli bir Full Stack geliştirici arıyoruz.',
-    salaryRange: 'Rekabetçi',
+    salaryRange: '45.000 - 70.000 ₺',
     postedAt: '2 hafta önce',
     applicationCount: 0,
-    candidateMatchesCount: 0
+    candidateMatchesCount: 0,
+    companySector: 'Fintech',
+    companySize: '200-500 Çalışan',
+    companyCity: 'İzmir',
+    companyWebsite: 'www.finanssoft.com',
+    companyDescription: 'FinansSoft, bankacılık ve finans sektörüne yönelik yazılım çözümleri geliştiren köklü bir teknoloji şirketidir. 10 yılı aşkın deneyimimizle 50\'den fazla finans kuruluşuna hizmet veriyoruz.',
   },
   {
     id: 'job_4',
@@ -54,10 +69,15 @@ export const INITIAL_JOBS: Job[] = [
     skills: ['Python', 'TensorFlow', 'NLP', 'PyTorch'],
     experienceLevel: '5+ Yıl',
     description: 'Gelişmiş doğal dil işleme (NLP) ve LLM tabanlı çözümler geliştirecek, yapay zeka eşleştirme algoritmalarımızı optimize edecek vizyoner bir AI mühendisi arıyoruz.',
-    salaryRange: 'Rekabetçi',
+    salaryRange: '60.000 - 90.000 ₺',
     postedAt: 'Yeni',
     applicationCount: 0,
-    candidateMatchesCount: 0
+    candidateMatchesCount: 0,
+    companySector: 'Yapay Zeka',
+    companySize: '50-200 Çalışan',
+    companyCity: 'İstanbul',
+    companyWebsite: 'www.techvision.ai',
+    companyDescription: 'TechVision Analytics, yapay zeka ve derin öğrenme alanında Türkiye\'nin öncü ar-ge şirketlerinden biridir. NLP, computer vision ve predictive analytics konularında dünya standartlarında çözümler üretiyoruz.',
   }
 ];
 

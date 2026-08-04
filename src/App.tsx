@@ -11,6 +11,7 @@ import { NotificationPanel } from './components/NotificationPanel';
 import { JobListPage } from './components/JobListPage';
 import { JobDetailPage } from './components/JobDetailPage';
 import { PublicProfilePage } from './components/PublicProfilePage';
+import { CompanyProfilePage, CompanyProfile } from './components/CompanyProfilePage';
 import { User, Role, Notification, Job } from './types';
 import { Bell } from 'lucide-react';
 
@@ -21,9 +22,12 @@ export default function App() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [activeMainView, setActiveMainView] = useState<'home' | 'applications' | 'network' | 'profile'>('home');
-  const [activeView, setActiveView] = useState<'main' | 'savedJobs' | 'notifications' | 'jobList' | 'jobDetail' | 'profile'>('main');
+  const [activeTab, setActiveTab] = useState<'home' | 'applications'>('home');
+  const [activeMainView, setActiveMainView] = useState<'dashboard' | 'network'>('dashboard');
+  const [activeView, setActiveView] = useState<'main' | 'savedJobs' | 'notifications' | 'jobList' | 'jobDetail' | 'companyProfile' | 'profile'>('main');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [selectedCompany, setSelectedCompany] = useState<CompanyProfile | null>(null);
+  const [companyJobs, setCompanyJobs] = useState<Job[]>([]);
   const [viewingProfileUserId, setViewingProfileUserId] = useState<string | null>(null);
 
   // Load user session on startup
@@ -170,6 +174,25 @@ export default function App() {
     setActiveView('jobDetail');
   };
 
+  const handleViewCompany = async (companyName: string, employerId?: string) => {
+    try {
+      let res;
+      if (employerId) {
+        res = await fetch(`/api/company/${employerId}`);
+      } else {
+        res = await fetch(`/api/company/search/${encodeURIComponent(companyName)}`);
+      }
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedCompany(data.profile);
+        setCompanyJobs(data.profile.jobs || []);
+        setActiveView('companyProfile');
+      }
+    } catch (err) {
+      console.error('Company fetch error:', err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col font-sans text-slate-800">
       {/* Header Navigation */}
@@ -286,6 +309,7 @@ export default function App() {
               onBack={() => setActiveView('jobList')}
               onOpenAuth={handleOpenAuth}
               onApplied={fetchNotifications}
+              onViewCompany={handleViewCompany}
             />
           ) : (
             (() => {
@@ -294,6 +318,13 @@ export default function App() {
               return null;
             })()
           )
+        ) : activeView === 'companyProfile' && selectedCompany ? (
+          <CompanyProfilePage
+            company={selectedCompany}
+            jobs={companyJobs}
+            onBack={() => setActiveView('jobDetail')}
+            onViewJob={(job) => { setSelectedJob(job); setActiveView('jobDetail'); }}
+          />
         ) : currentUser ? (
           currentUser.role === 'admin' ? (
             <AdminDashboard currentUser={currentUser} />

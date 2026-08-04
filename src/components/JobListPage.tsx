@@ -14,13 +14,18 @@ interface JobListPageProps {
 
 const TYPE_OPTIONS = ['Tümü', 'Uzaktan', 'Hibrit', 'Ofisten'];
 const EXPERIENCE_OPTIONS = ['Tümü', '0-1 Yıl', '1-2 Yıl', '2-3 Yıl', '3-5 Yıl', '5+ Yıl'];
-const SECTOR_OPTIONS = ['Tümü', 'Teknoloji', 'Finans', 'Sağlık', 'Eğitim', 'Perakende', 'Üretim'];
 
 const TYPE_COLORS: Record<string, string> = {
   'Uzaktan': 'bg-blue-50 text-blue-700 border-blue-200',
   'Hibrit': 'bg-amber-50 text-amber-700 border-amber-200',
   'Ofisten': 'bg-emerald-50 text-emerald-700 border-emerald-200',
 };
+
+function getMatchColor(score: number) {
+  if (score >= 75) return { bar: 'bg-emerald-500', text: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' };
+  if (score >= 50) return { bar: 'bg-amber-400', text: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' };
+  return { bar: 'bg-rose-400', text: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-200' };
+}
 
 export const JobListPage: React.FC<JobListPageProps> = ({ currentUser, onViewDetail, onOpenAuth }) => {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -31,15 +36,20 @@ export const JobListPage: React.FC<JobListPageProps> = ({ currentUser, onViewDet
   const [selectedExperience, setSelectedExperience] = useState('Tümü');
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const hasMatchScores = currentUser?.role === 'candidate' && jobs.some(j => j.previewMatchScore !== undefined);
 
   useEffect(() => {
     fetchJobs();
-  }, []);
+  }, [currentUser]);
 
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/jobs');
+      // Aday ise userId ile fetch → backend match skoru hesaplar ve sıralar
+      const url = currentUser?.role === 'candidate'
+        ? `/api/jobs?userId=${currentUser.id}`
+        : '/api/jobs';
+      const res = await fetch(url);
       const data = await res.json();
       setJobs(data.jobs || []);
     } catch (err) {
@@ -83,6 +93,9 @@ export const JobListPage: React.FC<JobListPageProps> = ({ currentUser, onViewDet
           <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 px-3 py-1 text-xs font-medium text-emerald-300 mb-4">
             <Sparkles className="h-3 w-3" />
             {jobs.length} aktif ilan mevcut
+            {hasMatchScores && (
+              <span className="ml-1 text-emerald-400">· profilinize göre sıralandı</span>
+            )}
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">
             Hayalindeki İşi Bul
@@ -297,6 +310,8 @@ interface JobCardProps {
 const JobCard: React.FC<JobCardProps> = ({ job, index, viewMode, currentUser, onViewDetail, onOpenAuth }) => {
   const initials = job.company.slice(0, 2).toUpperCase();
   const typeClass = TYPE_COLORS[job.type] || 'bg-slate-50 text-slate-600 border-slate-200';
+  const hasScore = job.previewMatchScore !== undefined;
+  const scoreColors = hasScore ? getMatchColor(job.previewMatchScore!) : null;
 
   return (
     <motion.div
@@ -309,14 +324,24 @@ const JobCard: React.FC<JobCardProps> = ({ job, index, viewMode, currentUser, on
       onClick={() => onViewDetail(job)}
     >
       {/* Company Avatar */}
-      <div className={`shrink-0 flex items-center justify-center rounded-xl font-bold text-sm text-white bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm ${
-        viewMode === 'list' ? 'h-11 w-11' : 'h-12 w-12 mb-4'
-      }`}>
-        {initials}
-      </div>
+      {job.companyAvatarUrl ? (
+        <img
+          src={job.companyAvatarUrl}
+          alt={job.company}
+          className={`shrink-0 rounded-xl object-cover border border-slate-100 ${
+            viewMode === 'list' ? 'h-11 w-11' : 'h-12 w-12 mb-4'
+          }`}
+        />
+      ) : (
+        <div className={`shrink-0 flex items-center justify-center rounded-xl font-bold text-sm text-white bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm ${
+          viewMode === 'list' ? 'h-11 w-11' : 'h-12 w-12 mb-4'
+        }`}>
+          {initials}
+        </div>
+      )}
 
       {/* Content */}
-      <div className={`flex-1 ${viewMode === 'list' ? '' : ''}`}>
+      <div className="flex-1">
         <div className="flex items-start justify-between gap-2">
           <div>
             <h3 className="font-semibold text-slate-900 text-sm group-hover:text-emerald-700 transition-colors leading-tight">
@@ -325,13 +350,42 @@ const JobCard: React.FC<JobCardProps> = ({ job, index, viewMode, currentUser, on
             <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
               <Building2 className="h-3 w-3" />
               {job.company}
+              {job.companySector && (
+                <span className="text-slate-300 mx-0.5">·</span>
+              )}
+              {job.companySector && (
+                <span className="text-slate-400">{job.companySector}</span>
+              )}
             </p>
           </div>
-          <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full border ${typeClass}`}>
-            {job.type === 'Uzaktan' && <Wifi className="h-3 w-3 inline mr-1" />}
-            {job.type}
-          </span>
+          {/* Sağ üst: tip badge + match skoru */}
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${typeClass}`}>
+              {job.type === 'Uzaktan' && <Wifi className="h-3 w-3 inline mr-1" />}
+              {job.type}
+            </span>
+            {hasScore && scoreColors && (
+              <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${scoreColors.bg} ${scoreColors.text} ${scoreColors.border} flex items-center gap-1`}>
+                <Sparkles className="h-3 w-3" />
+                %{job.previewMatchScore} eşleşme
+              </span>
+            )}
+          </div>
         </div>
+
+        {/* Match progress bar */}
+        {hasScore && scoreColors && viewMode === 'grid' && (
+          <div className="mt-2">
+            <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${job.previewMatchScore}%` }}
+                transition={{ duration: 0.6, ease: 'easeOut', delay: index * 0.04 }}
+                className={`h-full rounded-full ${scoreColors.bar}`}
+              />
+            </div>
+          </div>
+        )}
 
         {viewMode === 'grid' && (
           <p className="text-xs text-slate-500 mt-2 line-clamp-2 leading-relaxed">
@@ -349,9 +403,14 @@ const JobCard: React.FC<JobCardProps> = ({ job, index, viewMode, currentUser, on
             <Clock className="h-3 w-3" />
             {job.postedAt}
           </span>
-          {job.applicationCount > 0 && (
+          {job.companySize && (
             <span className="flex items-center gap-1 text-xs text-slate-500">
               <Users className="h-3 w-3" />
+              {job.companySize}
+            </span>
+          )}
+          {job.applicationCount > 0 && (
+            <span className="flex items-center gap-1 text-xs text-slate-400">
               {job.applicationCount} başvuru
             </span>
           )}

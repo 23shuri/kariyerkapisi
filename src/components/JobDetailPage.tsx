@@ -3,7 +3,8 @@ import { motion } from 'motion/react';
 import {
   ArrowLeft, MapPin, Briefcase, Clock, Users, Building2,
   CheckCircle2, Sparkles, Send, BookmarkPlus, BookmarkCheck,
-  Wifi, LayoutGrid, Star, ChevronRight, BadgeCheck, AlertCircle
+  Wifi, LayoutGrid, Star, ChevronRight, BadgeCheck, AlertCircle,
+  Globe, UsersRound, Factory, ExternalLink
 } from 'lucide-react';
 import { Job, User } from '../types';
 
@@ -13,6 +14,7 @@ interface JobDetailPageProps {
   onBack: () => void;
   onOpenAuth: (role: 'candidate' | 'employer') => void;
   onApplied?: () => void;
+  onViewCompany?: (companyName: string, employerId?: string) => void;
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -27,6 +29,7 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
   onBack,
   onOpenAuth,
   onApplied,
+  onViewCompany,
 }) => {
   const [applying, setApplying] = useState(false);
   const [applied, setApplied] = useState(false);
@@ -137,7 +140,12 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
                     <span className="flex items-center gap-1 text-sm text-slate-600 font-medium">
                       <Building2 className="h-3.5 w-3.5 text-slate-400" />
-                      {job.company}
+                      <button
+                        onClick={() => onViewCompany?.(job.company, job.employerId)}
+                        className="hover:text-emerald-600 hover:underline transition-colors"
+                      >
+                        {job.company}
+                      </button>
                     </span>
                     <span className="flex items-center gap-1 text-sm text-slate-500">
                       <MapPin className="h-3.5 w-3.5 text-slate-400" />
@@ -155,6 +163,16 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
                     <span className="text-xs font-medium px-2.5 py-1 rounded-full border bg-slate-50 text-slate-600 border-slate-200">
                       {job.salaryRange}
                     </span>
+                    {isCandidate && job.previewMatchScore !== undefined && (
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full border flex items-center gap-1 ${
+                        job.previewMatchScore >= 75 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                        job.previewMatchScore >= 50 ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                        'bg-rose-50 text-rose-600 border-rose-200'
+                      }`}>
+                        <Sparkles className="h-3 w-3" />
+                        %{job.previewMatchScore} uyum
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -297,6 +315,109 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
                 <p className="text-xs text-emerald-700 italic">{matchResult.description}</p>
               </motion.div>
             )}
+
+            {/* Şirket Hakkında */}
+            {(job.companySector || job.companySize || job.companyDescription || job.companyWebsite) && (
+              <motion.div
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-white rounded-2xl border border-slate-100 p-6"
+              >
+                <h2 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-emerald-600" />
+                  Şirket Hakkında
+                </h2>
+
+                {/* Şirket başlık */}
+                <div className="flex items-center gap-3 mb-4">
+                  {job.companyAvatarUrl ? (
+                    <img
+                      src={job.companyAvatarUrl}
+                      alt={job.company}
+                      className="h-12 w-12 rounded-xl object-cover border border-slate-100"
+                    />
+                  ) : (
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-lg shrink-0">
+                      {job.company.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <p className="font-bold text-slate-900 text-sm">{job.company}</p>
+                    {job.companySector && (
+                      <p className="text-xs text-slate-500 mt-0.5">{job.companySector}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Şirket bilgileri grid */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  {job.companySize && (
+                    <div className="flex items-center gap-2 bg-slate-50 rounded-xl p-3">
+                      <UsersRound className="h-4 w-4 text-slate-400 shrink-0" />
+                      <div>
+                        <p className="text-[10px] text-slate-400 font-medium">Çalışan Sayısı</p>
+                        <p className="text-xs font-bold text-slate-700">{job.companySize}</p>
+                      </div>
+                    </div>
+                  )}
+                  {job.companySector && (
+                    <div className="flex items-center gap-2 bg-slate-50 rounded-xl p-3">
+                      <Factory className="h-4 w-4 text-slate-400 shrink-0" />
+                      <div>
+                        <p className="text-[10px] text-slate-400 font-medium">Sektör</p>
+                        <p className="text-xs font-bold text-slate-700">{job.companySector}</p>
+                      </div>
+                    </div>
+                  )}
+                  {job.companyCity && (
+                    <div className="flex items-center gap-2 bg-slate-50 rounded-xl p-3">
+                      <MapPin className="h-4 w-4 text-slate-400 shrink-0" />
+                      <div>
+                        <p className="text-[10px] text-slate-400 font-medium">Merkez</p>
+                        <p className="text-xs font-bold text-slate-700">{job.companyCity}</p>
+                      </div>
+                    </div>
+                  )}
+                  {job.companyWebsite && (
+                    <div className="flex items-center gap-2 bg-slate-50 rounded-xl p-3">
+                      <Globe className="h-4 w-4 text-slate-400 shrink-0" />
+                      <div>
+                        <p className="text-[10px] text-slate-400 font-medium">Web Sitesi</p>
+                        <a
+                          href={job.companyWebsite.startsWith('http') ? job.companyWebsite : `https://${job.companyWebsite}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-0.5"
+                        >
+                          Ziyaret Et <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Şirket açıklaması */}
+                {job.companyDescription && (
+                  <p className="text-xs text-slate-600 leading-relaxed border-t border-slate-50 pt-3">
+                    {job.companyDescription}
+                  </p>
+                )}
+
+                {/* Şirketi Görüntüle butonu */}
+                {onViewCompany && (
+                  <button
+                    onClick={() => onViewCompany(job.company, job.employerId)}
+                    className="mt-4 w-full flex items-center justify-center gap-2 border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold py-2.5 rounded-xl transition"
+                  >
+                    <Building2 className="h-3.5 w-3.5" />
+                    Şirket Profilini Görüntüle
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </motion.div>
+            )}
           </div>
 
           {/* ── Right / Sidebar ── */}
@@ -309,6 +430,52 @@ export const JobDetailPage: React.FC<JobDetailPageProps> = ({
               transition={{ delay: 0.05 }}
               className="bg-white rounded-2xl border border-slate-100 p-5 sticky top-20"
             >
+              {/* Preview Match Skoru — başvuru öncesi */}
+              {isCandidate && job.previewMatchScore !== undefined && !applied && (
+                <div className={`mb-4 rounded-xl p-3 border ${
+                  job.previewMatchScore >= 75 ? 'bg-emerald-50 border-emerald-200' :
+                  job.previewMatchScore >= 50 ? 'bg-amber-50 border-amber-200' :
+                  'bg-rose-50 border-rose-200'
+                }`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
+                      <Sparkles className={`h-3.5 w-3.5 ${
+                        job.previewMatchScore >= 75 ? 'text-emerald-600' :
+                        job.previewMatchScore >= 50 ? 'text-amber-600' : 'text-rose-500'
+                      }`} />
+                      Profil Uyum Skoru
+                    </span>
+                    <span className={`text-lg font-black ${
+                      job.previewMatchScore >= 75 ? 'text-emerald-700' :
+                      job.previewMatchScore >= 50 ? 'text-amber-700' : 'text-rose-600'
+                    }`}>
+                      %{job.previewMatchScore}
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-white/60 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${job.previewMatchScore}%` }}
+                      transition={{ duration: 0.8, ease: 'easeOut' }}
+                      className={`h-full rounded-full ${
+                        job.previewMatchScore >= 75 ? 'bg-emerald-500' :
+                        job.previewMatchScore >= 50 ? 'bg-amber-400' : 'bg-rose-400'
+                      }`}
+                    />
+                  </div>
+                  <p className={`text-[11px] mt-1.5 font-medium ${
+                    job.previewMatchScore >= 75 ? 'text-emerald-700' :
+                    job.previewMatchScore >= 50 ? 'text-amber-700' : 'text-rose-600'
+                  }`}>
+                    {job.previewMatchScore >= 75
+                      ? 'Profiliniz bu pozisyona çok uygun!'
+                      : job.previewMatchScore >= 50
+                      ? 'Profiliniz kısmen uyuşuyor.'
+                      : 'Profilinizi güncelleyerek eşleşmeyi artırabilirsiniz.'}
+                  </p>
+                </div>
+              )}
+
               <p className="text-xs text-slate-500 mb-1">Maaş Aralığı</p>
               <p className="text-lg font-bold text-slate-900 mb-4">{job.salaryRange}</p>
 

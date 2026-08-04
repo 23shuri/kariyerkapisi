@@ -132,6 +132,16 @@ export interface Job {
   postedAt: string;
   applicationCount: number;
   candidateMatchesCount: number;
+  // İşveren profil bilgileri
+  companySector?: string;
+  companySize?: string;
+  companyCity?: string;
+  companyWebsite?: string;
+  companyDescription?: string;
+  companyAvatarUrl?: string;
+  // Önizleme eşleşme skoru (giriş yapılmış kullanıcı için)
+  previewMatchScore?: number;
+  previewSkillAlignment?: number;
 }
 
 export interface MatchDetail {

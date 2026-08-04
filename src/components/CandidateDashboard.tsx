@@ -5,6 +5,8 @@ import {
   Building2, Clock, Layers, DollarSign, Users, SlidersHorizontal, X, MessageSquare
 } from 'lucide-react';
 import { User as UserType, Job, Application, MatchDetail, Review } from '../types';
+import { CertificateManager } from './CertificateManager';
+import { ProfileWizard } from './ProfileWizard';
 
 interface CandidateDashboardProps {
   currentUser: UserType;
