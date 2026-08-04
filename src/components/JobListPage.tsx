@@ -45,10 +45,18 @@ export const JobListPage: React.FC<JobListPageProps> = ({ currentUser, onViewDet
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      // Aday ise userId ile fetch → backend match skoru hesaplar ve sıralar
-      const url = currentUser?.role === 'candidate'
-        ? `/api/jobs?userId=${currentUser.id}`
-        : '/api/jobs';
+      let url = '/api/jobs';
+      if (currentUser?.role === 'candidate') {
+        const params = new URLSearchParams({ userId: currentUser.id });
+        // Beceri ve CV metnini de gönder — sunucu restart sonrası kullanıcı bellekte yoksa kurtarır
+        if (currentUser.skills?.length) {
+          params.append('skills', currentUser.skills.join(','));
+        }
+        if ((currentUser as any).resumeText) {
+          params.append('resumeText', (currentUser as any).resumeText.slice(0, 500));
+        }
+        url = `/api/jobs?${params.toString()}`;
+      }
       const res = await fetch(url);
       const data = await res.json();
       setJobs(data.jobs || []);

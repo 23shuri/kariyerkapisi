@@ -54,10 +54,23 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Main Navigation Tabs */}
           {currentUser && onMainViewChange && (
             <nav className="hidden md:flex items-center space-x-1">
+              {/* İş İlanları — hem aday hem işveren için */}
+              <button
+                onClick={onViewJobs}
+                className={`px-4 py-2 text-sm font-semibold rounded-lg transition flex items-center gap-2 ${
+                  activeView === 'jobList' || activeView === 'jobDetail'
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : 'text-slate-600 hover:text-emerald-600 hover:bg-slate-50'
+                }`}
+              >
+                <Briefcase className="h-4 w-4" />
+                İş İlanları
+              </button>
+
               <button
                 onClick={() => onMainViewChange('home')}
                 className={`px-4 py-2 text-sm font-semibold rounded-lg transition flex items-center gap-2 ${
-                  activeMainView === 'home'
+                  activeView === 'main' && activeMainView === 'home'
                     ? 'bg-emerald-50 text-emerald-700'
                     : 'text-slate-600 hover:text-emerald-600 hover:bg-slate-50'
                 }`}
@@ -70,7 +83,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <button
                   onClick={() => onMainViewChange('applications')}
                   className={`px-4 py-2 text-sm font-semibold rounded-lg transition flex items-center gap-2 ${
-                    activeMainView === 'applications'
+                    activeView === 'main' && activeMainView === 'applications'
                       ? 'bg-emerald-50 text-emerald-700'
                       : 'text-slate-600 hover:text-emerald-600 hover:bg-slate-50'
                   }`}
@@ -83,7 +96,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 onClick={() => onMainViewChange('network')}
                 className={`px-4 py-2 text-sm font-semibold rounded-lg transition flex items-center gap-2 ${
-                  activeMainView === 'network'
+                  activeView === 'main' && activeMainView === 'network'
                     ? 'bg-blue-50 text-blue-700'
                     : 'text-slate-600 hover:text-blue-600 hover:bg-slate-50'
                 }`}
@@ -95,7 +108,7 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 onClick={() => onNavigateToProfile && onNavigateToProfile()}
                 className={`px-4 py-2 text-sm font-semibold rounded-lg transition flex items-center gap-2 ${
-                  activeMainView === 'profile'
+                  activeView === 'profile'
                     ? 'bg-purple-50 text-purple-700'
                     : 'text-slate-600 hover:text-purple-600 hover:bg-slate-50'
                 }`}

@@ -41,8 +41,22 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/user/${userId}`);
+      // Kendi profilimizi görüyorsak localStorage session'u da gönder — sunucu restart sonrası kurtarır
+      let url = `/api/user/${userId}`;
+      if (currentUser?.id === userId) {
+        const sessionData = encodeURIComponent(JSON.stringify(currentUser));
+        url = `/api/user/${userId}?sessionData=${sessionData}`;
+      }
+
+      const res = await fetch(url);
       if (!res.ok) {
+        // 404 ise ve currentUser bu kişiyse — direkt currentUser'ı kullan
+        if (res.status === 404 && currentUser?.id === userId) {
+          setUser(currentUser);
+          setViewCount((currentUser as any).profileViews || 0);
+          setIsLoading(false);
+          return;
+        }
         setError(res.status === 404 ? 'Kullanıcı bulunamadı' : 'Profil yüklenirken hata oluştu');
         return;
       }
@@ -51,7 +65,13 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
       setViewCount(data.user.profileViews || 0);
     } catch (err) {
       console.error('Profile fetch error:', err);
-      setError('Bağlantı hatası');
+      // Network hatasında currentUser varsa onu kullan
+      if (currentUser?.id === userId) {
+        setUser(currentUser);
+        setViewCount(0);
+      } else {
+        setError('Bağlantı hatası');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -71,12 +91,17 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
     setIsUploadingPhoto(true);
     setPhotoUploadError(null);
     try {
-      const formData = new FormData();
-      formData.append('photo', file);
-      formData.append('userId', userId);
+      // Dosyayı base64'e çevir
+      const photoBase64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(file);
+      });
+
       const res = await fetch('/api/user/upload-photo', {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, photoBase64 })
       });
       const data = await res.json();
       if (res.ok && data.avatarUrl) {

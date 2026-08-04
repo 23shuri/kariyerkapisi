@@ -12,31 +12,9 @@ export default defineConfig(() => {
       },
     },
     server: {
-      // HMR is disabled in AI Studio via DISABLE_HMR env var.
-      // Do not modifyâ€”file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
-      // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
-      proxy: {
-        '/api': {
-          target: 'http://127.0.0.1:5001',
-          changeOrigin: true,
-          secure: false,
-          configure: (proxy) => {
-            proxy.on('error', (_err, _req, res) => {
-              if (res && !res.headersSent) {
-                res.writeHead(503, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Backend sunucusuna ulaşılamadı.' }));
-              }
-            });
-          },
-        },
-        '/uploads': {
-          target: 'http://127.0.0.1:5001',
-          changeOrigin: true,
-          secure: false,
-        },
-      },
+      // Proxy YOK — API istekleri server.ts üzerinden (port 3000) Vite middleware ile karşılanıyor
     },
   };
 });

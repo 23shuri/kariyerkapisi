@@ -114,16 +114,31 @@ app.post('/api/auth/register', (req, res) => {
 // 3. Jobs Endpoint: Get all (with optional preview match scores)
 app.get('/api/jobs', (req, res) => {
   const userId = req.query.userId as string | undefined;
+  const skillsParam = req.query.skills as string | undefined;
+  const resumeText = req.query.resumeText as string | undefined;
 
   if (!userId) {
-    // Giriş yapılmamış — skor olmadan döndür
     return res.json({ jobs });
   }
 
   // Kullanıcıyı bul
   let candidate = users.find(u => u.id === userId);
 
-  // Bellekte yoksa (sunucu restart) — session bilgisi query'den alınabilir
+  // Bellekte yoksa — query'den gelen bilgilerle geçici profil oluştur
+  if (!candidate && (skillsParam || resumeText)) {
+    const skills = skillsParam ? skillsParam.split(',').map(s => s.trim()).filter(Boolean) : [];
+    candidate = {
+      id: userId,
+      email: `${userId}@session.local`,
+      fullName: 'Aday',
+      role: 'candidate',
+      skills,
+      resumeText: resumeText || skills.join(', '),
+      profileStrength: 50,
+    };
+    users.push(candidate);
+  }
+
   if (!candidate) {
     return res.json({ jobs });
   }
@@ -669,6 +684,66 @@ app.post('/api/parse-cv', async (req, res) => {
     console.error('[AI Parse Error] Parsing failed:', err);
     return res.status(500).json({ error: 'Özgeçmiş analiz edilirken bir hata oluştu.' });
   }
+});
+
+// 10b. User Profile Endpoint — GET /api/user/:userId (PublicProfilePage için)
+app.get('/api/user/:userId', (req, res) => {
+  const { userId } = req.params;
+  let user = users.find(u => u.id === userId);
+
+  if (!user) {
+    // Sunucu restart sonrası bellekte yok — query'den gelen session bilgisiyle geri yükle
+    const sessionData = req.query.sessionData as string | undefined;
+    if (sessionData) {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(sessionData));
+        if (parsed && parsed.id === userId) {
+          user = { ...parsed };
+          users.push(user);
+          console.log(`[User] Auto-restored from session: ${userId}`);
+        }
+      } catch { /* ignore */ }
+    }
+  }
+
+  if (!user) {
+    return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+  }
+  return res.json({ user });
+});
+
+// 10c. User Profile View Count
+app.post('/api/user/:userId/view', (req, res) => {
+  const { userId } = req.params;
+  const user = users.find(u => u.id === userId) as any;
+  if (user) {
+    user.profileViews = (user.profileViews || 0) + 1;
+  }
+  return res.json({ success: true });
+});
+
+// 10d. User Photo Upload
+app.post('/api/user/upload-photo', async (req, res) => {
+  const { userId, photoBase64 } = req.body;
+  if (!userId || !photoBase64) {
+    return res.status(400).json({ error: 'userId ve fotoğraf gereklidir.' });
+  }
+  const userIndex = users.findIndex(u => u.id === userId);
+  if (userIndex === -1) {
+    return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+  }
+  users[userIndex].avatarUrl = photoBase64;
+  return res.json({ avatarUrl: photoBase64 });
+});
+
+// 10e. User CV Download (placeholder)
+app.get('/api/user/:userId/cv', (req, res) => {
+  const { userId } = req.params;
+  const user = users.find(u => u.id === userId);
+  const text = (user as any)?.resumeText || `${user?.fullName || 'Aday'} - CV`;
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename="cv.pdf"`);
+  res.send(Buffer.from(text));
 });
 
 // 11. Profile Update Endpoint (Candidate)

@@ -100,7 +100,6 @@ export default function App() {
     setCurrentUser(user);
     localStorage.setItem('kariyer_kapisi_session', JSON.stringify(user));
     setShowAuthModal(false);
-    // İlan sayfasındaysa orada kal, değilse dashboard'a yönlendir
     if (activeView !== 'jobList' && activeView !== 'jobDetail') {
       setActiveView('main');
       setActiveMainView('home');
@@ -110,7 +109,6 @@ export default function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     localStorage.removeItem('kariyer_kapisi_session');
-    // Çıkış yapınca ana sayfaya dön
     setActiveView('main');
     setActiveMainView('home');
   };
@@ -169,6 +167,11 @@ export default function App() {
     setActiveView('jobList');
   };
 
+  const handleTabChange = (tab: 'home' | 'applications') => {
+    setActiveView('main');
+    setActiveMainView(tab);
+  };
+
   const handleViewJobDetail = (job: Job) => {
     setSelectedJob(job);
     setActiveView('jobDetail');
@@ -203,6 +206,7 @@ export default function App() {
         onOpenNotifications={handleNavigateToNotifications}
         onNavigateToSavedJobs={handleNavigateToSavedJobs}
         onNavigateToProfile={handleNavigateToProfile}
+        onViewJobs={handleViewJobList}
         activeView={activeView}
         unreadCount={unreadCount}
         activeMainView={activeMainView}
