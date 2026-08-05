@@ -13,13 +13,15 @@ interface PublicProfilePageProps {
   currentUser: User | null;
   onBack: () => void;
   onProfileUpdated?: (updatedUser: User) => void;
+  onNavigateToProfile?: (userId: string) => void;
 }
 
 export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
   userId,
   currentUser,
   onBack,
-  onProfileUpdated
+  onProfileUpdated,
+  onNavigateToProfile
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -113,13 +115,8 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      // Kendi profilimizi görüyorsak localStorage session'u da gönder — sunucu restart sonrası kurtarır
       let url = `/api/user/${userId}`;
-      if (currentUser?.id === userId) {
-        const sessionData = encodeURIComponent(JSON.stringify(currentUser));
-        url = `/api/user/${userId}?sessionData=${sessionData}`;
-      }
-
+      
       const res = await fetch(url);
       if (!res.ok) {
         // 404 ise ve currentUser bu kişiyse — direkt currentUser'ı kullan
@@ -815,7 +812,7 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
                       <div
                         key={friend.id}
                         className="group relative bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl p-4 hover:shadow-lg hover:border-emerald-300 transition cursor-pointer"
-                        onClick={() => window.location.href = `#profile-${friend.id}`}
+                        onClick={() => onNavigateToProfile && onNavigateToProfile(friend.id)}
                       >
                         <div className="flex items-start gap-3">
                           {friend.avatarUrl ? (
@@ -891,7 +888,7 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
                               key={person.id}
                               user={person}
                               currentUser={currentUser}
-                              onViewProfile={() => window.location.href = `#profile-${person.id}`}
+                              onViewProfile={() => onNavigateToProfile && onNavigateToProfile(person.id)}
                               onConnect={() => handleSendConnectionRequest(person.id)}
                             />
                           ))}
@@ -917,7 +914,7 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
                               key={person.id}
                               user={person}
                               currentUser={currentUser}
-                              onViewProfile={() => window.location.href = `#profile-${person.id}`}
+                              onViewProfile={() => onNavigateToProfile && onNavigateToProfile(person.id)}
                               onConnect={() => handleSendConnectionRequest(person.id)}
                             />
                           ))}
@@ -943,7 +940,7 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
                               key={person.id}
                               user={person}
                               currentUser={currentUser}
-                              onViewProfile={() => window.location.href = `#profile-${person.id}`}
+                              onViewProfile={() => onNavigateToProfile && onNavigateToProfile(person.id)}
                               onConnect={() => handleSendConnectionRequest(person.id)}
                             />
                           ))}

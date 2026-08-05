@@ -220,6 +220,7 @@ export default function App() {
             userId={viewingProfileUserId}
             currentUser={currentUser}
             onProfileUpdated={handleProfileUpdated}
+            onNavigateToProfile={(userId) => setViewingProfileUserId(userId)}
             onBack={() => {
               setActiveView('main');
               setActiveMainView('home');

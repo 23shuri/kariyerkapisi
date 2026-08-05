@@ -1189,34 +1189,7 @@ def get_user_details(user_id):
     user = UserModel.query.get(user_id)
     print(f"[DEBUG] Database query result: {user}")
     
-    # Eğer DB'de bulunamadıysa ve sessionData varsa onu kullan (frontend fallback)
     if not user:
-        session_data_str = request.args.get('sessionData')
-        print(f"[DEBUG] sessionData parameter: {session_data_str[:100] if session_data_str else None}...")
-        
-        if session_data_str:
-            try:
-                session_data = json.loads(session_data_str)
-                print(f"[DEBUG] Parsed session_data id: {session_data.get('id')}")
-                
-                if session_data.get('id') == user_id:
-                    print(f"[DEBUG] Using session data for user {user_id}")
-                    # Session data'dan user objesi oluştur
-                    return jsonify({
-                        'user': session_data,
-                        'cv': {
-                            'hasResume': bool(session_data.get('resume_text')),
-                            'resumeLength': len(session_data.get('resume_text', '')),
-                            'skillsCount': len(session_data.get('skills', [])),
-                            'experienceYears': session_data.get('experience_years', 0),
-                            'location': session_data.get('location', ''),
-                            'title': session_data.get('title', ''),
-                            'profileStrength': session_data.get('profile_strength', 0)
-                        }
-                    })
-            except Exception as e:
-                print(f"[DEBUG] Error parsing sessionData: {e}")
-                
         print(f"[DEBUG] User {user_id} not found, returning 404")
         return jsonify({'error': 'Kullanıcı bulunamadı.'}), 404
     
