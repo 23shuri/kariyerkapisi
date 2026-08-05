@@ -75,6 +75,7 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
     try {
       const res = await fetch(`/api/connections/suggestions/${currentUser.id}`);
       const data = await res.json();
+      console.log('[DEBUG] Suggestions data:', data);
       if (res.ok) {
         setSuggestions({
           highProbability: data.highProbability || [],
@@ -1309,9 +1310,18 @@ const UserConnectionCard: React.FC<UserConnectionCardProps> = ({
   };
 
   const handleViewProfile = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
+    console.log('[DEBUG] View profile clicked for:', user.fullName, user.id);
     onViewProfile();
   };
+
+  console.log('[DEBUG] UserConnectionCard render:', {
+    name: user.fullName,
+    hasReasons: !!user.connectionReason,
+    reasonsCount: user.connectionReason?.length || 0,
+    reasons: user.connectionReason
+  });
 
   return (
     <div className="group bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl p-5 hover:shadow-lg hover:border-blue-300 transition">
@@ -1366,7 +1376,11 @@ const UserConnectionCard: React.FC<UserConnectionCardProps> = ({
             ))}
           </div>
         </div>
-      ) : null}
+      ) : (
+        <div className="mb-4 pb-4 border-b border-slate-100">
+          <p className="text-xs text-slate-400 italic">Öneri bilgisi yok</p>
+        </div>
+      )}
 
       {/* Mutual Friends */}
       {user.mutualFriends && user.mutualFriends > 0 && (
