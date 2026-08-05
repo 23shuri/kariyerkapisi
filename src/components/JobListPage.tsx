@@ -191,7 +191,7 @@ export const JobListPage: React.FC<JobListPageProps> = ({ currentUser, onViewDet
           <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 px-3 py-1 text-xs font-medium text-emerald-300 mb-4">
             <Sparkles className="h-3 w-3" />
             {jobs.length} aktif ilan mevcut
-            {hasMatchScores && (
+            {hasMatchScores && currentUser?.role !== 'employer' && (
               <span className="ml-1 text-emerald-400">· profilinize göre sıralandı</span>
             )}
           </div>
@@ -596,7 +596,7 @@ const JobCard: React.FC<JobCardProps> = ({ job, index, viewMode, currentUser, on
               {job.type === 'Uzaktan' && <Wifi className="h-3 w-3 inline mr-1" />}
               {job.type}
             </span>
-            {hasScore && scoreColors && (
+            {hasScore && scoreColors && currentUser?.role !== 'employer' && (
               <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${scoreColors.bg} ${scoreColors.text} ${scoreColors.border} flex items-center gap-1`}>
                 <Sparkles className="h-3 w-3" />
                 %{job.previewMatchScore} eşleşme
@@ -606,7 +606,7 @@ const JobCard: React.FC<JobCardProps> = ({ job, index, viewMode, currentUser, on
         </div>
 
         {/* Match progress bar */}
-        {hasScore && scoreColors && viewMode === 'grid' && (
+        {hasScore && scoreColors && viewMode === 'grid' && currentUser?.role !== 'employer' && (
           <div className="mt-2">
             <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
               <motion.div
