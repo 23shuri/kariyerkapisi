@@ -220,7 +220,12 @@ export default function App() {
             userId={viewingProfileUserId}
             currentUser={currentUser}
             onProfileUpdated={handleProfileUpdated}
-            onNavigateToProfile={(userId) => setViewingProfileUserId(userId)}
+            onNavigateToProfile={(userId) => {
+              console.log('[DEBUG] App.tsx - navigating to profile:', userId);
+              setViewingProfileUserId(userId);
+              setActiveView('profile');
+              console.log('[DEBUG] App.tsx - activeView set to profile');
+            }}
             onBack={() => {
               setActiveView('main');
               setActiveMainView('home');
