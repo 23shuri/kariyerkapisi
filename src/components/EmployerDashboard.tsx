@@ -4,6 +4,7 @@ import {
   MapPin, Clock, Search, RefreshCw, BadgeCheck, BadgeAlert, FileText, ChevronDown, Check, X, Upload
 } from 'lucide-react';
 import { Job, Application, MatchDetail } from '../types';
+import { INITIAL_JOBS } from '../data';
 
 interface EmployerDashboardProps {
   currentUser: { id: string; fullName: string; avatarUrl?: string };
@@ -63,9 +64,13 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
   const [cvDetailText, setCvDetailText] = useState<string | null>(null);
 
   const fetchData = () => {
-    // Tüm veriler localStorage'dan yükleniyor (backend offline)
-    const postedJobs = JSON.parse(localStorage.getItem('kariyer_kapisi_posted_jobs') || '[]');
-    setJobs(postedJobs);
+    // İşverene ait ilanlar: localStorage'daki kendi ilanları + demo ilanlar
+    const postedJobs: Job[] = JSON.parse(localStorage.getItem('kariyer_kapisi_posted_jobs') || '[]');
+    // Sadece bu işverene ait olanları filtrele
+    const myPostedJobs = postedJobs.filter((j: Job) => !j.employerId || j.employerId === currentUser.id);
+    // Demo ilanları da göster (platform ilanları)
+    const allJobs = [...myPostedJobs, ...INITIAL_JOBS];
+    setJobs(allJobs);
 
     const allApplications = JSON.parse(localStorage.getItem('kariyer_kapisi_applications') || '[]');
     setApplications(allApplications);
@@ -74,7 +79,7 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
     const highMatchApps = allApplications.filter((a: any) => (a.matchScore || 0) >= 80);
     const interviewApps = allApplications.filter((a: any) => a.status === 'Mülakat');
     setStats({
-      totalJobs: postedJobs.length,
+      totalJobs: allJobs.length,
       totalApplications: allApplications.length,
       highMatches: highMatchApps.length,
       inInterview: interviewApps.length,
