@@ -78,6 +78,8 @@ class UserModel(db.Model):
     linkedin_url = db.Column(db.String(256), nullable=True)
     portfolio_url = db.Column(db.String(256), nullable=True)
     cover_photo_url = db.Column(db.Text, nullable=True)
+    profile_views = db.Column(db.Integer, default=0)
+    
     def to_dict(self):
         return {
             'id': self.id,
@@ -106,7 +108,8 @@ class UserModel(db.Model):
             'experience': json.loads(self.experience_json) if self.experience_json else [],
             'languages': json.loads(self.languages_json) if self.languages_json else [],
             'certificates': json.loads(self.certificates_json) if self.certificates_json else [],
-            'projects': json.loads(self.projects_json) if self.projects_json else []
+            'projects': json.loads(self.projects_json) if self.projects_json else [],
+            'profileViews': self.profile_views or 0
         }
 
 class JobModel(db.Model):
