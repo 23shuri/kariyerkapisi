@@ -92,7 +92,7 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
   const handleSendConnectionRequest = async (targetUserId: string) => {
     if (!currentUser) return;
     try {
-      const res = await fetch('/api/connections/request', {
+      const res = await fetch('/api/network/connections/request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -101,13 +101,17 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
           message: 'Merhaba, bağlantı kurmak isterim.'
         })
       });
+      const data = await res.json();
       if (res.ok) {
         alert('Bağlantı isteği gönderildi!');
         // Refresh suggestions to remove the person we just sent request to
         fetchSuggestions();
+      } else {
+        alert(data.error || 'Bağlantı isteği gönderilemedi.');
       }
     } catch (err) {
       console.error('Connection request error:', err);
+      alert('Bir hata oluştu. Lütfen tekrar deneyin.');
     }
   };
 
@@ -1304,6 +1308,11 @@ const UserConnectionCard: React.FC<UserConnectionCardProps> = ({
     setIsConnecting(false);
   };
 
+  const handleViewProfile = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onViewProfile();
+  };
+
   return (
     <div className="group bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl p-5 hover:shadow-lg hover:border-blue-300 transition">
       <div className="flex items-start gap-4 mb-4">
@@ -1345,16 +1354,19 @@ const UserConnectionCard: React.FC<UserConnectionCardProps> = ({
       </div>
 
       {/* Connection Reasons */}
-      {user.connectionReason && user.connectionReason.length > 0 && (
-        <div className="mb-4 space-y-1">
-          {user.connectionReason.slice(0, 2).map((reason, i) => (
-            <p key={i} className="text-xs text-slate-600 flex items-start gap-1.5">
-              <span className="text-emerald-500 mt-0.5">•</span>
-              <span>{reason}</span>
-            </p>
-          ))}
+      {user.connectionReason && user.connectionReason.length > 0 ? (
+        <div className="mb-4 pb-4 border-b border-slate-100">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Neden Önerildi</p>
+          <div className="space-y-1.5">
+            {user.connectionReason.slice(0, 3).map((reason, i) => (
+              <p key={i} className="text-xs text-slate-700 flex items-start gap-1.5">
+                <span className="text-emerald-500 mt-0.5 font-bold">✓</span>
+                <span>{reason}</span>
+              </p>
+            ))}
+          </div>
         </div>
-      )}
+      ) : null}
 
       {/* Mutual Friends */}
       {user.mutualFriends && user.mutualFriends > 0 && (
@@ -1367,7 +1379,7 @@ const UserConnectionCard: React.FC<UserConnectionCardProps> = ({
       {/* Action Buttons */}
       <div className="flex gap-2">
         <button
-          onClick={onViewProfile}
+          onClick={handleViewProfile}
           className="flex-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5"
         >
           <Eye className="h-3.5 w-3.5" />
