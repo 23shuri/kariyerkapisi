@@ -2292,8 +2292,13 @@ def calculate_connection_score(current_user, current_extended, target_user, targ
     score = 0
     reasons = []
     
+    print(f"[DEBUG] Calculating score for {target_user.full_name}")
+    print(f"[DEBUG] Current user extended: {current_extended}")
+    print(f"[DEBUG] Target user extended: {target_extended}")
+    
     # Mutual friends
     mutual_count = get_mutual_friends_count(current_user_id, target_user.id)
+    print(f"[DEBUG] Mutual friends: {mutual_count}")
     if mutual_count > 0:
         mutual_score = min(mutual_count * 5, 40)
         score += mutual_score
@@ -2301,6 +2306,7 @@ def calculate_connection_score(current_user, current_extended, target_user, targ
     
     # Company & Department matching
     if current_extended and target_extended:
+        print(f"[DEBUG] Current company: {current_extended.company}, Target company: {target_extended.company}")
         if current_extended.company and target_extended.company:
             if current_extended.company.lower().strip() == target_extended.company.lower().strip():
                 if current_extended.department and target_extended.department:
@@ -2333,24 +2339,8 @@ def calculate_connection_score(current_user, current_extended, target_user, targ
             if current_extended.sector.lower().strip() == target_extended.sector.lower().strip():
                 score += 15
                 reasons.append(f"Aynı sektör ({current_extended.sector})")
-    
-    # Check work history for previous same company
-    if current_user.experience_json and target_user.experience_json:
-        try:
-            current_exp = json.loads(current_user.experience_json)
-            target_exp = json.loads(target_user.experience_json)
-            
-            current_companies = set([exp.get('company', '').lower().strip() for exp in current_exp if exp.get('company')])
-            target_companies = set([exp.get('company', '').lower().strip() for exp in target_exp if exp.get('company')])
-            
-            common_companies = current_companies.intersection(target_companies)
-            if common_companies and not (current_extended and target_extended and 
-                current_extended.company and target_extended.company and 
-                current_extended.company.lower().strip() in common_companies):
-                score += 35
-                reasons.append(f"Daha önce aynı şirkette çalıştınız")
-        except:
-            pass
+    else:
+        print(f"[DEBUG] Missing extended profiles - current: {bool(current_extended)}, target: {bool(target_extended)}")
     
     # Location + Similar field
     if current_user.location and target_user.location:
@@ -2376,6 +2366,17 @@ def calculate_connection_score(current_user, current_extended, target_user, targ
                 reasons.append(f"{len(common_skills)} ortak yetenek")
         except:
             pass
+    
+    # Fallback reasons if no matches found
+    if not reasons:
+        if target_user.role == 'candidate':
+            reasons.append("Platform üyesi")
+        if target_user.location:
+            reasons.append(f"{target_user.location} konumunda")
+        if target_user.title:
+            reasons.append(f"{target_user.title} pozisyonunda")
+    
+    print(f"[DEBUG] Final score: {score}, reasons: {reasons}")
     
     return {
         'score': score,
