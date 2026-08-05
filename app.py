@@ -2108,6 +2108,305 @@ def admin_delete_job(job_id):
     db.session.commit()
     return jsonify({'success': True})
 
+# 28. Get User's Friends (Connected Users)
+@app.route('/api/connections/friends/<user_id>', methods=['GET'])
+def get_user_friends(user_id):
+    """Get all friends (accepted connections) of a user with full details"""
+    try:
+        # Get all connections where user is either initiator or receiver
+        connections = ConnectionModel.query.filter(
+            db.or_(
+                ConnectionModel.user_id == user_id,
+                ConnectionModel.connected_user_id == user_id
+            ),
+            ConnectionModel.status == 'active'
+        ).all()
+        
+        friend_ids = set()
+        for conn in connections:
+            if conn.user_id == user_id:
+                friend_ids.add(conn.connected_user_id)
+            else:
+                friend_ids.add(conn.user_id)
+        
+        # Get full user details for all friends
+        friends = []
+        for friend_id in friend_ids:
+            user = UserModel.query.get(friend_id)
+            if user:
+                user_dict = user.to_dict()
+                
+                # Get extended profile info
+                extended = UserProfileExtendedModel.query.get(friend_id)
+                if extended:
+                    user_dict['company'] = extended.company
+                    user_dict['department'] = extended.department
+                    user_dict['university'] = extended.university
+                    user_dict['sector'] = extended.sector
+                
+                # Get mutual friends count
+                mutual_count = get_mutual_friends_count(user_id, friend_id)
+                user_dict['mutualFriends'] = mutual_count
+                
+                friends.append(user_dict)
+        
+        return jsonify({'friends': friends, 'count': len(friends)})
+    except Exception as e:
+        print(f"[ERROR] get_user_friends: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# 29. Get Smart Connection Suggestions
+@app.route('/api/connections/suggestions/<user_id>', methods=['GET'])
+def get_connection_suggestions(user_id):
+    """
+    Get intelligent connection suggestions categorized by:
+    - High Probability (same company/dept, same university, mutual friends)
+    - Same Sector (same industry, similar roles)
+    - Discover (similar skills, location, new users)
+    """
+    try:
+        current_user = UserModel.query.get(user_id)
+        if not current_user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        current_extended = UserProfileExtendedModel.query.get(user_id)
+        
+        # Get existing connections and pending requests to exclude
+        existing_connections = get_user_connection_ids(user_id)
+        
+        # Get all potential users (exclude self and existing connections)
+        all_users = UserModel.query.filter(
+            UserModel.id != user_id,
+            ~UserModel.id.in_(existing_connections) if existing_connections else True
+        ).all()
+        
+        high_probability = []
+        same_sector = []
+        discover = []
+        
+        for user in all_users:
+            user_extended = UserProfileExtendedModel.query.get(user.id)
+            score_data = calculate_connection_score(
+                current_user, current_extended,
+                user, user_extended,
+                user_id
+            )
+            
+            user_dict = user.to_dict()
+            if user_extended:
+                user_dict['company'] = user_extended.company
+                user_dict['department'] = user_extended.department
+                user_dict['university'] = user_extended.university
+                user_dict['sector'] = user_extended.sector
+            
+            user_dict['mutualFriends'] = score_data['mutual_friends']
+            user_dict['connectionReason'] = score_data['reasons']
+            user_dict['score'] = score_data['score']
+            
+            # Categorize based on score and reasons
+            if score_data['score'] >= 70:
+                high_probability.append(user_dict)
+            elif score_data['score'] >= 40:
+                same_sector.append(user_dict)
+            else:
+                discover.append(user_dict)
+        
+        # Sort each category by score
+        high_probability.sort(key=lambda x: x['score'], reverse=True)
+        same_sector.sort(key=lambda x: x['score'], reverse=True)
+        discover.sort(key=lambda x: x['score'], reverse=True)
+        
+        return jsonify({
+            'highProbability': high_probability[:15],
+            'sameSector': same_sector[:15],
+            'discover': discover[:15]
+        })
+    
+    except Exception as e:
+        print(f"[ERROR] get_connection_suggestions: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# Helper function: Get user's connection IDs
+def get_user_connection_ids(user_id):
+    """Get all user IDs that are connected or have pending requests"""
+    connection_ids = set()
+    
+    # Get accepted connections
+    connections = ConnectionModel.query.filter(
+        db.or_(
+            ConnectionModel.user_id == user_id,
+            ConnectionModel.connected_user_id == user_id
+        )
+    ).all()
+    
+    for conn in connections:
+        if conn.user_id == user_id:
+            connection_ids.add(conn.connected_user_id)
+        else:
+            connection_ids.add(conn.user_id)
+    
+    # Get pending requests (both sent and received)
+    pending_requests = ConnectionRequestModel.query.filter(
+        db.or_(
+            ConnectionRequestModel.from_user_id == user_id,
+            ConnectionRequestModel.to_user_id == user_id
+        ),
+        ConnectionRequestModel.status == 'pending'
+    ).all()
+    
+    for req in pending_requests:
+        connection_ids.add(req.from_user_id)
+        connection_ids.add(req.to_user_id)
+    
+    return list(connection_ids)
+
+# Helper function: Get mutual friends count
+def get_mutual_friends_count(user_id_1, user_id_2):
+    """Calculate number of mutual friends between two users"""
+    # Get friends of user 1
+    connections_1 = ConnectionModel.query.filter(
+        db.or_(
+            ConnectionModel.user_id == user_id_1,
+            ConnectionModel.connected_user_id == user_id_1
+        ),
+        ConnectionModel.status == 'active'
+    ).all()
+    
+    friends_1 = set()
+    for conn in connections_1:
+        if conn.user_id == user_id_1:
+            friends_1.add(conn.connected_user_id)
+        else:
+            friends_1.add(conn.user_id)
+    
+    # Get friends of user 2
+    connections_2 = ConnectionModel.query.filter(
+        db.or_(
+            ConnectionModel.user_id == user_id_2,
+            ConnectionModel.connected_user_id == user_id_2
+        ),
+        ConnectionModel.status == 'active'
+    ).all()
+    
+    friends_2 = set()
+    for conn in connections_2:
+        if conn.user_id == user_id_2:
+            friends_2.add(conn.connected_user_id)
+        else:
+            friends_2.add(conn.user_id)
+    
+    # Calculate intersection
+    mutual = friends_1.intersection(friends_2)
+    return len(mutual)
+
+# Helper function: Calculate connection score
+def calculate_connection_score(current_user, current_extended, target_user, target_extended, current_user_id):
+    """
+    Calculate intelligent connection score based on multiple factors:
+    - Same company & department: +50 points
+    - Same company, different dept: +30 points
+    - Same university & department: +40 points
+    - Same university: +25 points
+    - Worked at same company before: +35 points
+    - Mutual friends: +5 per mutual (max 40)
+    - Same location + similar field: +20 points
+    - Similar skills: +3 per skill (max 30)
+    - Same sector: +15 points
+    """
+    score = 0
+    reasons = []
+    
+    # Mutual friends
+    mutual_count = get_mutual_friends_count(current_user_id, target_user.id)
+    if mutual_count > 0:
+        mutual_score = min(mutual_count * 5, 40)
+        score += mutual_score
+        reasons.append(f"{mutual_count} ortak bağlantı")
+    
+    # Company & Department matching
+    if current_extended and target_extended:
+        if current_extended.company and target_extended.company:
+            if current_extended.company.lower().strip() == target_extended.company.lower().strip():
+                if current_extended.department and target_extended.department:
+                    if current_extended.department.lower().strip() == target_extended.department.lower().strip():
+                        score += 50
+                        reasons.append(f"Aynı şirket ve departman ({current_extended.company})")
+                    else:
+                        score += 30
+                        reasons.append(f"Aynı şirket ({current_extended.company})")
+                else:
+                    score += 30
+                    reasons.append(f"Aynı şirket ({current_extended.company})")
+        
+        # University matching
+        if current_extended.university and target_extended.university:
+            if current_extended.university.lower().strip() == target_extended.university.lower().strip():
+                if current_extended.department and target_extended.department:
+                    if current_extended.department.lower().strip() == target_extended.department.lower().strip():
+                        score += 40
+                        reasons.append(f"Aynı üniversite ve bölüm ({current_extended.university})")
+                    else:
+                        score += 25
+                        reasons.append(f"Aynı üniversite ({current_extended.university})")
+                else:
+                    score += 25
+                    reasons.append(f"Aynı üniversite ({current_extended.university})")
+        
+        # Sector matching
+        if current_extended.sector and target_extended.sector:
+            if current_extended.sector.lower().strip() == target_extended.sector.lower().strip():
+                score += 15
+                reasons.append(f"Aynı sektör ({current_extended.sector})")
+    
+    # Check work history for previous same company
+    if current_user.experience_json and target_user.experience_json:
+        try:
+            current_exp = json.loads(current_user.experience_json)
+            target_exp = json.loads(target_user.experience_json)
+            
+            current_companies = set([exp.get('company', '').lower().strip() for exp in current_exp if exp.get('company')])
+            target_companies = set([exp.get('company', '').lower().strip() for exp in target_exp if exp.get('company')])
+            
+            common_companies = current_companies.intersection(target_companies)
+            if common_companies and not (current_extended and target_extended and 
+                current_extended.company and target_extended.company and 
+                current_extended.company.lower().strip() in common_companies):
+                score += 35
+                reasons.append(f"Daha önce aynı şirkette çalıştınız")
+        except:
+            pass
+    
+    # Location + Similar field
+    if current_user.location and target_user.location:
+        if current_user.location.lower().strip() == target_user.location.lower().strip():
+            if current_user.title and target_user.title:
+                # Simple similarity check on titles
+                current_title_words = set(current_user.title.lower().split())
+                target_title_words = set(target_user.title.lower().split())
+                if len(current_title_words.intersection(target_title_words)) > 0:
+                    score += 20
+                    reasons.append(f"Aynı şehir, benzer meslek alanı ({current_user.location})")
+    
+    # Skills similarity
+    if current_user.skills_json and target_user.skills_json:
+        try:
+            current_skills = set([s.lower().strip() for s in json.loads(current_user.skills_json)])
+            target_skills = set([s.lower().strip() for s in json.loads(target_user.skills_json)])
+            
+            common_skills = current_skills.intersection(target_skills)
+            if common_skills:
+                skill_score = min(len(common_skills) * 3, 30)
+                score += skill_score
+                reasons.append(f"{len(common_skills)} ortak yetenek")
+        except:
+            pass
+    
+    return {
+        'score': score,
+        'reasons': reasons,
+        'mutual_friends': mutual_count
+    }
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()

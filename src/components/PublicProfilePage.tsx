@@ -25,17 +25,89 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewCount, setViewCount] = useState(0);
-  const [activeTab, setActiveTab] = useState<'overview' | 'experience' | 'education' | 'projects' | 'certificates' | 'languages'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'experience' | 'education' | 'projects' | 'certificates' | 'languages' | 'friends' | 'connections'>('overview');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPhotoUpload, setShowPhotoUpload] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
+  // Friends & Connections state
+  const [friends, setFriends] = useState<User[]>([]);
+  const [friendsLoading, setFriendsLoading] = useState(false);
+  const [suggestions, setSuggestions] = useState<{
+    highProbability: User[];
+    sameSector: User[];
+    discover: User[];
+  }>({ highProbability: [], sameSector: [], discover: [] });
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+
   useEffect(() => {
     fetchUserProfile();
     incrementViewCount();
-  }, [userId]);
+    if (activeTab === 'friends') {
+      fetchFriends();
+    } else if (activeTab === 'connections' && currentUser) {
+      fetchSuggestions();
+    }
+  }, [userId, activeTab]);
+
+  const fetchFriends = async () => {
+    setFriendsLoading(true);
+    try {
+      const res = await fetch(`/api/connections/friends/${userId}`);
+      const data = await res.json();
+      if (res.ok) {
+        setFriends(data.friends || []);
+      }
+    } catch (err) {
+      console.error('Friends fetch error:', err);
+    } finally {
+      setFriendsLoading(false);
+    }
+  };
+
+  const fetchSuggestions = async () => {
+    if (!currentUser) return;
+    setSuggestionsLoading(true);
+    try {
+      const res = await fetch(`/api/connections/suggestions/${currentUser.id}`);
+      const data = await res.json();
+      if (res.ok) {
+        setSuggestions({
+          highProbability: data.highProbability || [],
+          sameSector: data.sameSector || [],
+          discover: data.discover || []
+        });
+      }
+    } catch (err) {
+      console.error('Suggestions fetch error:', err);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
+
+  const handleSendConnectionRequest = async (targetUserId: string) => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch('/api/connections/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromUserId: currentUser.id,
+          toUserId: targetUserId,
+          message: 'Merhaba, bağlantı kurmak isterim.'
+        })
+      });
+      if (res.ok) {
+        alert('Bağlantı isteği gönderildi!');
+        // Refresh suggestions to remove the person we just sent request to
+        fetchSuggestions();
+      }
+    } catch (err) {
+      console.error('Connection request error:', err);
+    }
+  };
 
   const fetchUserProfile = async () => {
     setIsLoading(true);
@@ -407,6 +479,30 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
                 >
                   Diller
                 </button>
+                <button
+                  onClick={() => setActiveTab('friends')}
+                  className={`px-6 py-4 text-sm font-semibold whitespace-nowrap border-b-2 transition ${
+                    activeTab === 'friends'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Users className="h-4 w-4 inline mr-1.5" />
+                  Arkadaşlar
+                </button>
+                {currentUser && (
+                  <button
+                    onClick={() => setActiveTab('connections')}
+                    className={`px-6 py-4 text-sm font-semibold whitespace-nowrap border-b-2 transition ${
+                      activeTab === 'connections'
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <TrendingUp className="h-4 w-4 inline mr-1.5" />
+                    Bağlantılar
+                  </button>
+                )}
               </div>
             </div>
 
@@ -692,6 +788,179 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
                   </div>
                 ) : (
                   <p className="text-slate-500 text-center py-8">Henüz dil eklenmemiş.</p>
+                )}
+              </div>
+            )}
+
+            {/* Friends Tab */}
+            {activeTab === 'friends' && (
+              <div className="bg-white rounded-2xl shadow-sm p-6">
+                <h2 className="text-lg font-bold text-slate-900 mb-5 flex items-center gap-2">
+                  <Users className="h-5 w-5 text-emerald-600" />
+                  Arkadaşlar
+                  {friends.length > 0 && (
+                    <span className="ml-2 px-2.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold">
+                      {friends.length}
+                    </span>
+                  )}
+                </h2>
+
+                {friendsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 text-emerald-600 animate-spin" />
+                  </div>
+                ) : friends.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {friends.map((friend) => (
+                      <div
+                        key={friend.id}
+                        className="group relative bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl p-4 hover:shadow-lg hover:border-emerald-300 transition cursor-pointer"
+                        onClick={() => window.location.href = `#profile-${friend.id}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          {friend.avatarUrl ? (
+                            <img
+                              src={friend.avatarUrl.startsWith('http') ? friend.avatarUrl : `http://127.0.0.1:5001${friend.avatarUrl}`}
+                              alt={friend.fullName}
+                              className="h-14 w-14 rounded-xl object-cover ring-2 ring-emerald-100"
+                            />
+                          ) : (
+                            <div className="h-14 w-14 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-lg">
+                              {friend.fullName.charAt(0)}
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-slate-900 text-sm truncate group-hover:text-emerald-600 transition">
+                              {friend.fullName}
+                            </h3>
+                            {friend.title && (
+                              <p className="text-xs text-slate-600 mt-0.5 line-clamp-2">
+                                {friend.title}
+                              </p>
+                            )}
+                            {(friend as any).company && (
+                              <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                                <Building2 className="h-3 w-3" />
+                                {(friend as any).company}
+                              </p>
+                            )}
+                            {(friend as any).mutualFriends > 0 && (
+                              <p className="text-xs text-emerald-600 font-semibold mt-2">
+                                {(friend as any).mutualFriends} ortak bağlantı
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Users className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                    <p className="text-slate-500 font-medium">Henüz arkadaş eklenmemiş</p>
+                    <p className="text-xs text-slate-400 mt-1">Bağlantılar sekmesinden yeni kişiler keşfedin</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Connections Tab */}
+            {activeTab === 'connections' && currentUser && (
+              <div className="space-y-6">
+                {suggestionsLoading ? (
+                  <div className="bg-white rounded-2xl shadow-sm p-12 flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+                  </div>
+                ) : (
+                  <>
+                    {/* High Probability Section */}
+                    {suggestions.highProbability.length > 0 && (
+                      <div className="bg-white rounded-2xl shadow-sm p-6">
+                        <div className="flex items-center gap-2 mb-5">
+                          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+                            <TrendingUp className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <h2 className="text-lg font-bold text-slate-900">Tanıyor Olabileceğin Kişiler</h2>
+                            <p className="text-xs text-slate-500">Yüksek olasılıkla tanıdığınız profesyoneller</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {suggestions.highProbability.map((person) => (
+                            <UserConnectionCard
+                              key={person.id}
+                              user={person}
+                              currentUser={currentUser}
+                              onViewProfile={() => window.location.href = `#profile-${person.id}`}
+                              onConnect={() => handleSendConnectionRequest(person.id)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Same Sector Section */}
+                    {suggestions.sameSector.length > 0 && (
+                      <div className="bg-white rounded-2xl shadow-sm p-6">
+                        <div className="flex items-center gap-2 mb-5">
+                          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center">
+                            <Briefcase className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <h2 className="text-lg font-bold text-slate-900">Sektöründen Kişiler</h2>
+                            <p className="text-xs text-slate-500">Benzer alanlarda çalışan profesyoneller</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {suggestions.sameSector.map((person) => (
+                            <UserConnectionCard
+                              key={person.id}
+                              user={person}
+                              currentUser={currentUser}
+                              onViewProfile={() => window.location.href = `#profile-${person.id}`}
+                              onConnect={() => handleSendConnectionRequest(person.id)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Discover Section */}
+                    {suggestions.discover.length > 0 && (
+                      <div className="bg-white rounded-2xl shadow-sm p-6">
+                        <div className="flex items-center gap-2 mb-5">
+                          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center">
+                            <Users className="h-5 w-5 text-white" />
+                          </div>
+                          <div>
+                            <h2 className="text-lg font-bold text-slate-900">Keşfet</h2>
+                            <p className="text-xs text-slate-500">Ağınızı genişletebileceğiniz profesyoneller</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {suggestions.discover.map((person) => (
+                            <UserConnectionCard
+                              key={person.id}
+                              user={person}
+                              currentUser={currentUser}
+                              onViewProfile={() => window.location.href = `#profile-${person.id}`}
+                              onConnect={() => handleSendConnectionRequest(person.id)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {suggestions.highProbability.length === 0 &&
+                      suggestions.sameSector.length === 0 &&
+                      suggestions.discover.length === 0 && (
+                        <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
+                          <Users className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                          <p className="text-slate-500 font-medium">Şu anda öneri bulunmuyor</p>
+                          <p className="text-xs text-slate-400 mt-1">Profilinizi tamamlayarak daha fazla öneri alabilirsiniz</p>
+                        </div>
+                      )}
+                  </>
                 )}
               </div>
             )}
@@ -1007,5 +1276,121 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
       />
     )}
     </>
+  );
+};
+
+// UserConnectionCard Component
+interface UserConnectionCardProps {
+  user: User & { 
+    company?: string; 
+    department?: string; 
+    university?: string;
+    mutualFriends?: number;
+    connectionReason?: string[];
+  };
+  currentUser: User;
+  onViewProfile: () => void;
+  onConnect: () => void;
+}
+
+const UserConnectionCard: React.FC<UserConnectionCardProps> = ({ 
+  user, 
+  currentUser, 
+  onViewProfile, 
+  onConnect 
+}) => {
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  const handleConnect = async () => {
+    setIsConnecting(true);
+    await onConnect();
+    setIsConnecting(false);
+  };
+
+  return (
+    <div className="group bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl p-5 hover:shadow-lg hover:border-blue-300 transition">
+      <div className="flex items-start gap-4 mb-4">
+        {user.avatarUrl ? (
+          <img
+            src={user.avatarUrl.startsWith('http') ? user.avatarUrl : `http://127.0.0.1:5001${user.avatarUrl}`}
+            alt={user.fullName}
+            className="h-16 w-16 rounded-xl object-cover ring-2 ring-blue-100"
+          />
+        ) : (
+          <div className="h-16 w-16 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xl">
+            {user.fullName.charAt(0)}
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <h3 className="font-bold text-slate-900 text-base truncate group-hover:text-blue-600 transition">
+            {user.fullName}
+          </h3>
+          {user.title && (
+            <p className="text-sm text-slate-600 mt-0.5 line-clamp-2">
+              {user.title}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2 mt-2 text-xs">
+            {user.company && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-md font-medium">
+                <Building2 className="h-3 w-3" />
+                {user.company}
+              </span>
+            )}
+            {user.location && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-600 rounded-md font-medium">
+                <MapPin className="h-3 w-3" />
+                {user.location}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Connection Reasons */}
+      {user.connectionReason && user.connectionReason.length > 0 && (
+        <div className="mb-4 space-y-1">
+          {user.connectionReason.slice(0, 2).map((reason, i) => (
+            <p key={i} className="text-xs text-slate-600 flex items-start gap-1.5">
+              <span className="text-emerald-500 mt-0.5">•</span>
+              <span>{reason}</span>
+            </p>
+          ))}
+        </div>
+      )}
+
+      {/* Mutual Friends */}
+      {user.mutualFriends && user.mutualFriends > 0 && (
+        <p className="text-xs text-blue-600 font-semibold mb-3 flex items-center gap-1">
+          <Users className="h-3 w-3" />
+          {user.mutualFriends} ortak bağlantı
+        </p>
+      )}
+
+      {/* Action Buttons */}
+      <div className="flex gap-2">
+        <button
+          onClick={onViewProfile}
+          className="flex-1 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5"
+        >
+          <Eye className="h-3.5 w-3.5" />
+          Profili Gör
+        </button>
+        <button
+          onClick={handleConnect}
+          disabled={isConnecting}
+          className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5"
+        >
+          {isConnecting ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <>
+              <Users className="h-3.5 w-3.5" />
+              Bağlan
+            </>
+          )}
+        </button>
+      </div>
+    </div>
   );
 };
