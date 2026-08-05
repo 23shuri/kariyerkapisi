@@ -375,6 +375,7 @@ function AppContent() {
               currentUser={currentUser}
               onNotificationChange={fetchNotifications}
               onViewCandidateCVs={() => setActiveView('candidateCVs')}
+              onViewJobList={() => setActiveView('jobList')}
             />
           )
         ) : (

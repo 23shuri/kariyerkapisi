@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Briefcase, MapPin, DollarSign, Clock, Search, Sparkles, Plus, X, FileText } from 'lucide-react';
-import { User as UserType, Job, CandidateCV } from '../types';
+import { useState, useEffect } from 'react';
+import { Briefcase, MapPin, DollarSign, Clock, Search, Sparkles, Plus, X, FileText, Upload } from 'lucide-react';
+import { User as UserType, Job, CandidateCV, CVAnalysisResult } from '../types';
 import { INITIAL_JOBS } from '../data';
+import { CVAnalysisModal } from './CVAnalysisModal';
 
 interface CandidateDashboardProps {
   currentUser: UserType;
@@ -16,6 +18,9 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({
 }) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
+
+  // CV Analiz Modal state
+  const [showCVAnalysisModal, setShowCVAnalysisModal] = useState(false);
 
   // CV Yayınlama state
   const [showCVForm, setShowCVForm] = useState(false);
@@ -86,6 +91,50 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({
     localStorage.setItem('kariyer_kapisi_cvs', JSON.stringify(updated));
     setMyCV(null);
     alert('CV profiliniz kaldırıldı.');
+  };
+
+  const handleCVAnalysisComplete = (result: CVAnalysisResult) => {
+    if (!result.success || !result.data) return;
+
+    // Çıkarılan bilgileri profile yükle
+    const updatedUser: UserType = {
+      ...currentUser,
+      skills: result.data.skills || currentUser.skills,
+      education: result.data.education?.map((edu, idx) => ({
+        id: `edu_${idx}`,
+        school: edu.school,
+        degree: edu.level,
+        field: edu.field,
+        startDate: edu.year || '',
+        endDate: undefined,
+        current: false,
+        description: undefined,
+      })) || currentUser.education,
+      experience: result.data.experience?.map((exp, idx) => ({
+        id: `exp_${idx}`,
+        company: exp.company,
+        position: exp.position,
+        location: undefined,
+        startDate: exp.duration?.split('-')[0] || '',
+        endDate: exp.duration?.split('-')[1] || '',
+        current: false,
+        description: exp.description,
+      })) || currentUser.experience,
+      languages: result.data.languages?.map((lang, idx) => ({
+        id: `lang_${idx}`,
+        language: lang.name,
+        level: (lang.level?.toLowerCase() as any) || 'intermediate',
+      })) || currentUser.languages,
+      bio: result.data.summary || currentUser.bio,
+    };
+
+    // localStorage'a kaydet
+    localStorage.setItem('kariyer_kapisi_user', JSON.stringify(updatedUser));
+    
+    // Parent component'e bildir
+    onProfileUpdated(updatedUser);
+    
+    alert('✅ CV başarıyla analiz edildi ve profiliniz güncellenmiştir!');
   };
 
   return (
@@ -245,6 +294,28 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* CV Analiz Paneli */}
+            <div className="mb-8 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200 p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+                    <Upload className="h-5 w-5 text-purple-600" />
+                    CV'yi Otomatik Analiz Et
+                  </h2>
+                  <p className="text-sm text-slate-600 mt-0.5">
+                    PDF CV'nizi yükleyin, yapay zeka profilinizi otomatik olarak doldursun
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowCVAnalysisModal(true)}
+                  className="flex items-center gap-1.5 text-sm font-medium bg-purple-600 hover:bg-purple-700 text-white px-4 py-1.5 rounded-lg transition whitespace-nowrap"
+                >
+                  <Upload className="h-4 w-4" />
+                  CV Yükle
+                </button>
+              </div>
             </div>
 
             <div className="mb-4">
@@ -413,6 +484,14 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({
           </div>
         )}
       </div>
+
+      {/* CVAnalysisModal */}
+      <CVAnalysisModal
+        isOpen={showCVAnalysisModal}
+        onClose={() => setShowCVAnalysisModal(false)}
+        onAnalysisComplete={handleCVAnalysisComplete}
+        candidateId={currentUser.id}
+      />
     </div>
   );
 };

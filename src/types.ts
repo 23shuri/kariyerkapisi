@@ -208,3 +208,42 @@ export interface CandidateCV {
   publishedAt: string;
   isActive: boolean;
 }
+
+export interface EducationExtracted {
+  level: string;           // ilkokul, ortaokul, lise, üniversite
+  school: string;
+  field: string;           // Bölüm
+  year?: string;
+}
+
+export interface ExperienceExtracted {
+  company: string;
+  position: string;
+  duration: string;        // e.g., "2020-2023"
+  description?: string;
+}
+
+export interface LanguageExtracted {
+  name: string;
+  level: string;           // Beginner, Intermediate, Advanced, Native
+}
+
+export interface CertificationExtracted {
+  name: string;
+  issuer: string;
+  date?: string;
+}
+
+export interface CVAnalysisResult {
+  success: boolean;
+  message?: string;
+  data?: {
+    education: EducationExtracted[];
+    experience: ExperienceExtracted[];
+    skills: string[];
+    languages: LanguageExtracted[];
+    certifications: CertificationExtracted[];
+    summary: string;
+    extractedText?: string;  // Orijinal metni göster (debug için)
+  };
+}

@@ -908,6 +908,191 @@ def update_application_status(app_id):
 
     return jsonify({'application': app_obj.to_dict()})
 
+# ===== CV ANALYSIS ENDPOINT =====
+def extract_text_from_pdf(file_obj):
+    """Extract text from PDF file."""
+    try:
+        import fitz  # PyMuPDF
+        pdf_doc = fitz.open(stream=file_obj.read(), filetype="pdf")
+        text = ""
+        for page_num in range(len(pdf_doc)):
+            page = pdf_doc[page_num]
+            text += page.get_text()
+        return text
+    except Exception as e:
+        print(f"[PDF] Error extracting PDF: {e}")
+        return None
+
+def analyze_cv_with_gemini(cv_text: str):
+    """Analyze CV text using Gemini API and extract structured data."""
+    gemini_client = get_gemini_client()
+    
+    if not gemini_client:
+        # Fallback: use heuristic analysis
+        print("[AI] Gemini API not available, using heuristic analysis")
+        return analyze_cv_heuristic(cv_text)
+    
+    prompt = """
+    Analiz edin bu CV metnini ve aşağıdaki yapıyı JSON formatında döndürün:
+    {
+        "education": [
+            {"level": "üniversite/lise/vb", "school": "okul adı", "field": "bölüm", "year": "yıl"}
+        ],
+        "experience": [
+            {"company": "şirket adı", "position": "pozisyon", "duration": "başlangıç-bitiş yılı", "description": "kısa açıklama"}
+        ],
+        "skills": ["beceri1", "beceri2"],
+        "languages": [
+            {"name": "dil adı", "level": "seviye (Beginner/Intermediate/Advanced/Native)"}
+        ],
+        "certifications": [
+            {"name": "sertifika adı", "issuer": "veren kurum", "date": "tarih"}
+        ],
+        "summary": "özet metin"
+    }
+    
+    SADECE JSON döndürün, başka hiçbir şey yazmayın. Eğer bir alan bulunamazsa boş array döndürün.
+    
+    CV Metni:
+    {cv_text}
+    """
+    
+    try:
+        response = gemini_client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt
+        )
+        response_text = response.text.strip()
+        
+        # Extract JSON from response (in case Gemini returns markdown code blocks)
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0].strip()
+        
+        parsed = json.loads(response_text)
+        return parsed
+    except Exception as e:
+        print(f"[AI] Gemini analysis error: {e}")
+        # Fallback to heuristic
+        return analyze_cv_heuristic(cv_text)
+
+def analyze_cv_heuristic(cv_text: str):
+    """Heuristic CV analysis when AI is not available."""
+    lines = cv_text.split('\n')
+    
+    # Extract education (look for keywords)
+    education = []
+    experience = []
+    skills = []
+    languages = []
+    certifications = []
+    summary = ""
+    
+    # Simple heuristics
+    cv_lower = cv_text.lower()
+    
+    # Extract skills (common tech skills)
+    common_skills = [
+        'python', 'javascript', 'typescript', 'java', 'c++', 'react', 'angular', 'vue', 'node.js',
+        'sql', 'mongodb', 'postgresql', 'docker', 'kubernetes', 'aws', 'azure', 'gcp',
+        'html', 'css', 'tailwind', 'bootstrap', 'figma', 'photoshop', 'excel', 'powerpoint',
+        'machine learning', 'tensorflow', 'pytorch', 'data science', 'pandas', 'numpy',
+        'git', 'github', 'gitlab', 'devops', 'ci/cd', 'linux', 'unix'
+    ]
+    
+    for skill in common_skills:
+        if skill in cv_lower:
+            skills.append(skill.title())
+    
+    # Extract languages (common languages)
+    common_langs = ['english', 'spanish', 'french', 'german', 'italian', 'portuguese', 'turkish', 'chinese', 'japanese']
+    for lang in common_langs:
+        if lang in cv_lower:
+            languages.append({"name": lang.title(), "level": "Intermediate"})
+    
+    # Extract education from lines
+    for i, line in enumerate(lines):
+        line_lower = line.lower().strip()
+        if any(keyword in line_lower for keyword in ['university', 'üniversite', 'college', 'bachelor', 'master', 'phd', 'degree']):
+            education.append({
+                "level": "Üniversite",
+                "school": line.strip(),
+                "field": lines[i+1].strip() if i+1 < len(lines) else "",
+                "year": ""
+            })
+    
+    # Extract experience from lines
+    for i, line in enumerate(lines):
+        line_lower = line.lower().strip()
+        if any(keyword in line_lower for keyword in ['company', 'position', 'role', 'employed', 'worked', 'çalış']):
+            experience.append({
+                "company": line.strip(),
+                "position": lines[i+1].strip() if i+1 < len(lines) else "",
+                "duration": "",
+                "description": ""
+            })
+    
+    # Use first 200 chars as summary
+    summary = cv_text[:200].strip()
+    
+    return {
+        "education": education,
+        "experience": experience,
+        "skills": list(set(skills))[:10],  # Top 10 unique skills
+        "languages": languages,
+        "certifications": certifications,
+        "summary": summary
+    }
+
+@app.route('/api/cv/analyze', methods=['POST'])
+def analyze_cv():
+    """Analyze uploaded PDF CV and extract structured data."""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'success': False, 'error': 'Dosya bulunamadı.'}), 400
+        
+        file = request.files['file']
+        candidate_id = request.form.get('candidateId', '')
+        
+        if not file or file.filename == '':
+            return jsonify({'success': False, 'error': 'Lütfen geçerli bir dosya seçiniz.'}), 400
+        
+        if not file.filename.endswith('.pdf'):
+            return jsonify({'success': False, 'error': 'Sadece PDF dosyaları desteklenmektedir.'}), 400
+        
+        # Extract text from PDF
+        cv_text = extract_text_from_pdf(file)
+        if not cv_text:
+            return jsonify({'success': False, 'error': 'PDF metni çıkartılamadı.'}), 400
+        
+        print(f"[CV] Extracted {len(cv_text)} chars from PDF")
+        
+        # Analyze with AI or heuristic
+        analysis_result = analyze_cv_with_gemini(cv_text)
+        
+        # Save to localStorage (frontend will handle this via localStorage mock)
+        cv_analysis_key = f"kariyer_kapisi_cv_analysis_{candidate_id}"
+        
+        # Return structured result
+        return jsonify({
+            'success': True,
+            'message': 'CV başarıyla analiz edildi.',
+            'data': {
+                'education': analysis_result.get('education', []),
+                'experience': analysis_result.get('experience', []),
+                'skills': analysis_result.get('skills', []),
+                'languages': analysis_result.get('languages', []),
+                'certifications': analysis_result.get('certifications', []),
+                'summary': analysis_result.get('summary', ''),
+                'extractedText': cv_text[:500]  # First 500 chars for debug
+            }
+        })
+    
+    except Exception as e:
+        print(f"[CV Analysis Error] {e}")
+        return jsonify({'success': False, 'error': f'CV analiz hatası: {str(e)}'}), 500
+
 # 10. CV Parser
 @app.route('/api/parse-cv', methods=['POST'])
 def parse_cv():

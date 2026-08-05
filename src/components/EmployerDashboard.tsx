@@ -9,9 +9,10 @@ interface EmployerDashboardProps {
   currentUser: { id: string; fullName: string; avatarUrl?: string };
   onNotificationChange?: () => void;
   onViewCandidateCVs?: () => void;
+  onViewJobList?: () => void;
 }
 
-export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUser, onNotificationChange, onViewCandidateCVs }) => {
+export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUser, onNotificationChange, onViewCandidateCVs, onViewJobList }) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
   const [avgRating, setAvgRating] = useState<number>(0);
@@ -245,8 +246,8 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
       
       {/* Employer Profile Card - REMOVED, now using inline panel below */}
 
-      {/* Aday Profilleri Butonu + Profil Form */}
-      <div className="mb-6 flex gap-3">
+      {/* Aday Profilleri Butonu + Profil Form + İlan Ekleme */}
+      <div className="mb-6 flex gap-3 flex-wrap">
         {onViewCandidateCVs && (
           <button
             onClick={onViewCandidateCVs}
@@ -265,6 +266,13 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
         >
           <Building className="h-5 w-5" />
           {showProfileModal ? 'Formu Kapat' : 'Profili Düzenle'}
+        </button>
+        <button
+          onClick={() => setShowPostJob(!showPostJob)}
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-xl transition shadow-sm"
+        >
+          <Briefcase className="h-5 w-5" />
+          {showPostJob ? 'Formu Kapat' : 'İlan Ekle'}
         </button>
       </div>
 
@@ -404,11 +412,131 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
         </div>
       )}
 
+      {/* İlan Ekleme Formu Paneli */}
+      {showPostJob && (
+        <div className="mb-8 bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900 mb-5 flex items-center gap-2">
+            <Briefcase className="h-5 w-5 text-emerald-600" />
+            Yeni İş İlanı
+          </h2>
+
+          <form onSubmit={handlePostJob} className="space-y-5">
+            {/* Grid: Başlık, Konum */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Pozisyon Başlığı *</label>
+                <input 
+                  type="text"
+                  required
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                  placeholder="Örn: Senior Frontend Developer"
+                  className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Konum</label>
+                <input 
+                  type="text"
+                  required
+                  value={jobLocation}
+                  onChange={(e) => setJobLocation(e.target.value)}
+                  placeholder="İstanbul (Hibrit)"
+                  className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Grid: Çalışma Şekli, Tecrübe, Ücret */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Çalışma Şekli</label>
+                <select
+                  value={jobType}
+                  onChange={(e) => setJobType(e.target.value as any)}
+                  className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all bg-white"
+                >
+                  <option value="Uzaktan">Uzaktan</option>
+                  <option value="Hibrit">Hibrit</option>
+                  <option value="Ofisten">Ofisten</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Tecrübe Seviyesi</label>
+                <input 
+                  type="text"
+                  value={jobExperience}
+                  onChange={(e) => setJobExperience(e.target.value)}
+                  placeholder="3-5 Yıl"
+                  className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Ücret Aralığı</label>
+                <input 
+                  type="text"
+                  value={jobSalary}
+                  onChange={(e) => setJobSalary(e.target.value)}
+                  placeholder="Rekabetçi"
+                  className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Yetenekler */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Aranan Yetenekler (Virgülle Ayırın)</label>
+              <input 
+                type="text"
+                value={jobSkills}
+                onChange={(e) => setJobSkills(e.target.value)}
+                placeholder="React, TypeScript, CSS"
+                className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
+              />
+            </div>
+
+            {/* Açıklama */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">İş Açıklaması *</label>
+              <textarea 
+                rows={4}
+                required
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                placeholder="Görev tanımları ve aranan teknik kriterleri buraya yazın..."
+                className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs outline-none focus:border-emerald-500 transition-all resize-none"
+              />
+            </div>
+
+            {/* Buttons */}
+            <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowPostJob(false)}
+                className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-sm py-2 px-5 rounded-lg transition"
+              >
+                İptal
+              </button>
+              <button
+                type="submit"
+                disabled={isPosting}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm py-2 px-6 rounded-lg transition disabled:opacity-50"
+              >
+                {isPosting ? 'Yayınlanıyor...' : 'İlanı Yayınla'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* 1. Statistics Row */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-4 mb-8">
         
-        {/* Stat 1 */}
-        <div className="card-stat rounded-3xl p-6">
+        {/* Stat 1 - Aktif İlanlar */}
+        <button
+          onClick={onViewJobList}
+          className="card-stat rounded-3xl p-6 hover:shadow-md transition cursor-pointer"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Aktif İlanlar</span>
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
@@ -419,7 +547,7 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
             <span className="text-3xl font-bold text-slate-900 tracking-tight">{stats.totalJobs}</span>
             <span className="text-xs text-slate-400 font-medium">aktif ilan</span>
           </div>
-        </div>
+        </button>
 
         {/* Stat 2 */}
         <div className="card-stat rounded-3xl p-6">

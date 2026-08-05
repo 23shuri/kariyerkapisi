@@ -37,6 +37,18 @@ export const JobListPage: React.FC<JobListPageProps> = ({ currentUser, onViewDet
   const [selectedExperience, setSelectedExperience] = useState('Tümü');
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  
+  // Job posting form states
+  const [showPostJob, setShowPostJob] = useState(false);
+  const [isPosting, setIsPosting] = useState(false);
+  const [jobTitle, setJobTitle] = useState('');
+  const [jobLocation, setJobLocation] = useState('');
+  const [jobType, setJobType] = useState<'Uzaktan' | 'Hibrit' | 'Ofisten'>('Hibrit');
+  const [jobSkills, setJobSkills] = useState('');
+  const [jobExperience, setJobExperience] = useState('2-3 Yıl');
+  const [jobDescription, setJobDescription] = useState('');
+  const [jobSalary, setJobSalary] = useState('Rekabetçi');
+  
   const hasMatchScores = currentUser?.role === 'candidate' && jobs.some(j => j.previewMatchScore !== undefined);
 
   useEffect(() => {
@@ -85,6 +97,11 @@ export const JobListPage: React.FC<JobListPageProps> = ({ currentUser, onViewDet
       const postedJobs = JSON.parse(localStorage.getItem('kariyer_kapisi_posted_jobs') || '[]');
       allJobs = [...allJobs, ...postedJobs];
       
+      // İşveren ise sadece kendi ilanlarını göster
+      if (currentUser?.role === 'employer') {
+        allJobs = allJobs.filter(job => job.employerId === currentUser.id);
+      }
+      
       // Eşleşme puanını hesapla
       const jobsWithScores = allJobs.map(job => ({
         ...job,
@@ -119,6 +136,48 @@ export const JobListPage: React.FC<JobListPageProps> = ({ currentUser, onViewDet
     setLocationQuery('');
     setSelectedType('Tümü');
     setSelectedExperience('Tümü');
+  };
+
+  const handlePostJob = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsPosting(true);
+
+    const skillsArray = jobSkills.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    
+    const jobData = {
+      id: `job_${Date.now()}`,
+      title: jobTitle,
+      company: (currentUser as any).companyName || currentUser?.fullName.replace(' İK', '').trim() || 'Şirket',
+      employerId: currentUser?.id || 'unknown',
+      location: jobLocation,
+      type: jobType,
+      skills: skillsArray,
+      experienceLevel: jobExperience,
+      description: jobDescription,
+      salaryRange: jobSalary,
+      postedAt: new Date().toLocaleString('tr-TR'),
+      applicationCount: 0,
+      candidateMatchesCount: 0,
+      companySector: (currentUser as any)?.companySector || '',
+      companySize: (currentUser as any)?.companySize || '',
+      companyCity: (currentUser as any)?.companyCity || '',
+      companyWebsite: (currentUser as any)?.companyWebsite || '',
+      companyDescription: (currentUser as any)?.companyDescription || '',
+      companyAvatarUrl: currentUser?.avatarUrl || '',
+    };
+
+    const postedJobs = JSON.parse(localStorage.getItem('kariyer_kapisi_posted_jobs') || '[]');
+    postedJobs.push(jobData);
+    localStorage.setItem('kariyer_kapisi_posted_jobs', JSON.stringify(postedJobs));
+
+    setShowPostJob(false);
+    setJobTitle('');
+    setJobLocation('');
+    setJobSkills('');
+    setJobDescription('');
+    setIsPosting(false);
+    fetchJobs();
+    alert('✅ İlan başarıyla yayınlandı!');
   };
 
   const hasActiveFilters =
@@ -181,6 +240,140 @@ export const JobListPage: React.FC<JobListPageProps> = ({ currentUser, onViewDet
           </div>
         </div>
       </div>
+
+      {/* İlan Ekleme Formu - Sadece işverenler için */}
+      {currentUser?.role === 'employer' && (
+        <div className="bg-white border-b border-slate-200">
+          <div className="mx-auto max-w-7xl px-4 py-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-emerald-600" />
+                Yeni İş İlanı Yayınla
+              </h2>
+              {showPostJob && (
+                <button
+                  onClick={() => setShowPostJob(false)}
+                  className="text-sm text-slate-500 hover:text-slate-700 font-medium"
+                >
+                  Kapat
+                </button>
+              )}
+            </div>
+
+            {showPostJob ? (
+              <form onSubmit={handlePostJob} className="space-y-4 bg-slate-50 rounded-xl p-5 border border-slate-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Pozisyon Başlığı *</label>
+                    <input 
+                      type="text"
+                      required
+                      value={jobTitle}
+                      onChange={(e) => setJobTitle(e.target.value)}
+                      placeholder="Örn: Senior Frontend Developer"
+                      className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Konum</label>
+                    <input 
+                      type="text"
+                      required
+                      value={jobLocation}
+                      onChange={(e) => setJobLocation(e.target.value)}
+                      placeholder="İstanbul (Hibrit)"
+                      className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Çalışma Şekli</label>
+                    <select
+                      value={jobType}
+                      onChange={(e) => setJobType(e.target.value as any)}
+                      className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
+                    >
+                      <option value="Uzaktan">Uzaktan</option>
+                      <option value="Hibrit">Hibrit</option>
+                      <option value="Ofisten">Ofisten</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Tecrübe Seviyesi</label>
+                    <input 
+                      type="text"
+                      value={jobExperience}
+                      onChange={(e) => setJobExperience(e.target.value)}
+                      placeholder="3-5 Yıl"
+                      className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Ücret Aralığı</label>
+                    <input 
+                      type="text"
+                      value={jobSalary}
+                      onChange={(e) => setJobSalary(e.target.value)}
+                      placeholder="Rekabetçi"
+                      className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Aranan Yetenekler (Virgülle Ayırın)</label>
+                  <input 
+                    type="text"
+                    value={jobSkills}
+                    onChange={(e) => setJobSkills(e.target.value)}
+                    placeholder="React, TypeScript, CSS"
+                    className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">İş Açıklaması *</label>
+                  <textarea 
+                    rows={3}
+                    required
+                    value={jobDescription}
+                    onChange={(e) => setJobDescription(e.target.value)}
+                    placeholder="Görev tanımları ve aranan teknik kriterleri buraya yazın..."
+                    className="block w-full rounded-lg border border-slate-200 bg-white py-2 px-3 text-xs outline-none focus:border-emerald-500 transition-all resize-none"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-3 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={() => setShowPostJob(false)}
+                    className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs py-2 px-4 rounded-lg transition"
+                  >
+                    İptal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isPosting}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-2 px-5 rounded-lg transition disabled:opacity-50"
+                  >
+                    {isPosting ? 'Yayınlanıyor...' : 'İlanı Yayınla'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button
+                onClick={() => setShowPostJob(true)}
+                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-5 py-2.5 rounded-xl transition shadow-sm"
+              >
+                <Briefcase className="h-5 w-5" />
+                İlan Ekle
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Filter Bar */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
