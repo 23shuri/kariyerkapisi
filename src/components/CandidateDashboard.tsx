@@ -424,139 +424,7 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 text-slate-800">
       {activeTab === 'home' ? (
         /* ANA EKRAN - Jobs Feed */
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-        
-        {/* LEFT COLUMN: Candidate Profile & CV Parser */}
-        <div className="lg:col-span-4 space-y-6">
-          
-          {/* Profile card */}
-          <div className="panel rounded-3xl p-6">
-            <div className="flex items-center space-x-4 mb-5">
-              {currentUser.avatarUrl ? (
-                <img 
-                  src={currentUser.avatarUrl.startsWith('http') ? currentUser.avatarUrl : `http://127.0.0.1:5001${currentUser.avatarUrl}`}
-                  alt={currentUser.fullName} 
-                  className="h-14 w-14 rounded-2xl object-cover ring-2 ring-emerald-50"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 font-bold text-xl">
-                  {currentUser.fullName.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <div>
-                <h3 className="font-display text-base font-bold text-slate-900">{currentUser.fullName}</h3>
-                <p className="text-xs text-slate-400 font-medium">{currentUser.title || 'Başlık Tanımlanmadı'}</p>
-              </div>
-            </div>
-
-            {/* Profile Action Buttons */}
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              <button
-                onClick={() => setShowProfileWizard(true)}
-                className="inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold py-2 px-3 rounded-lg transition cursor-pointer"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                Profili Tamamla
-              </button>
-              <button
-                onClick={() => setShowProfileEditModal(true)}
-                className="inline-flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2 px-3 rounded-lg transition cursor-pointer"
-              >
-                <Award className="h-3.5 w-3.5" />
-                Hızlı Düzenle
-              </button>
-              <button
-                onClick={() => setShowCertificateManager(true)}
-                className="col-span-2 inline-flex items-center justify-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold py-2 px-3 rounded-lg transition cursor-pointer"
-              >
-                <Award className="h-3.5 w-3.5" />
-                Sertifikalarımı Yönet
-                {currentUser.certificates && currentUser.certificates.length > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 bg-purple-500 rounded-full text-[10px]">
-                    {currentUser.certificates.length}
-                  </span>
-                )}
-              </button>
-            </div>
-
-            {/* Profil Tamamlama Göstergesi */}
-            {(() => {
-              const steps = [
-                { label: 'Ad Soyad', done: !!currentUser.fullName },
-                { label: 'Unvan', done: !!currentUser.title },
-                { label: 'Konum', done: !!currentUser.location },
-                { label: 'Yetenekler', done: !!(currentUser.skills && currentUser.skills.length > 0) },
-                { label: 'Deneyim', done: !!(currentUser.experienceYears && currentUser.experienceYears > 0) },
-                { label: 'Sertifikalar', done: !!(currentUser.certificates && currentUser.certificates.length > 0) },
-                { label: 'CV Yüklendi', done: !!currentUser.resumeFileName },
-                { label: 'Profil Fotoğrafı', done: !!currentUser.avatarUrl },
-              ];
-              const completedCount = steps.filter(s => s.done).length;
-              const percentage = Math.round((completedCount / steps.length) * 100);
-              const color = percentage >= 80 ? 'emerald' : percentage >= 50 ? 'amber' : 'red';
-
-              return (
-                <div className="mb-4 rounded-2xl bg-slate-50 p-4 border border-slate-200">
-                  {/* Başlık ve yüzde */}
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="flex items-center gap-1.5 text-xs font-bold text-slate-700">
-                      <Sparkles className={`h-3.5 w-3.5 text-${color}-500`} />
-                      Profil Tamamlama
-                    </span>
-                    <span className={`text-sm font-black text-${color}-600`}>%{percentage}</span>
-                  </div>
-
-                  {/* Progress bar */}
-                  <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden mb-3">
-                    <div
-                      className={`h-full rounded-full transition-all duration-700 ${
-                        color === 'emerald' ? 'bg-emerald-500' :
-                        color === 'amber' ? 'bg-amber-400' : 'bg-red-400'
-                      }`}
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-
-                  {/* Adımlar */}
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {steps.map((step, idx) => (
-                      <div key={idx} className={`flex items-center gap-1.5 text-[10px] font-semibold rounded-lg px-2 py-1 ${
-                        step.done
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                          : 'bg-white text-slate-400 border border-slate-200'
-                      }`}>
-                        <span className={`h-3.5 w-3.5 rounded-full flex items-center justify-center shrink-0 text-[8px] font-black ${
-                          step.done ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-400'
-                        }`}>
-                          {step.done ? '✓' : '○'}
-                        </span>
-                        {step.label}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Mesaj */}
-                  <p className={`text-[10px] font-medium mt-2.5 ${
-                    color === 'emerald' ? 'text-emerald-600' :
-                    color === 'amber' ? 'text-amber-600' : 'text-red-500'
-                  }`}>
-                    {percentage === 100
-                      ? '🎉 Profiliniz tam! İlanlarla eşleşmeye hazırsınız.'
-                      : percentage >= 80
-                      ? `Harika! ${steps.length - completedCount} adım kaldı.`
-                      : percentage >= 50
-                      ? `${completedCount}/${steps.length} adım tamamlandı. Profili güçlendirin.`
-                      : `Profiliniz zayıf. Lütfen eksik bilgileri doldurun.`}
-                  </p>
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN: Jobs feed & Application statuses */}
-        <div className="lg:col-span-8 space-y-6">
+        <div className="space-y-6">
           
           {/* Job Feed header search */}
           <div className="panel rounded-3xl p-6">
@@ -778,10 +646,8 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({ currentU
             </div>
           </div>
         </div>
-
-      </div>
-  ) : (
-    /* MEVCUT BAŞVURULAR TAB */
+      ) : (
+        /* MEVCUT BAŞVURULAR TAB */
     <div className="max-w-5xl mx-auto">
       <div className="mb-6">
         <h2 className="font-display text-2xl font-bold text-slate-900">Mevcut Başvurularım</h2>
