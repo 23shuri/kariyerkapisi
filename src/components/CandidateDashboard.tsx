@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useState, useEffect } from 'react';
 import { Briefcase, MapPin, DollarSign, Clock, Search, Sparkles, Plus, X, FileText, Upload } from 'lucide-react';
 import { User as UserType, Job, CandidateCV, CVAnalysisResult } from '../types';
 import { INITIAL_JOBS } from '../data';
