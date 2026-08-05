@@ -97,9 +97,9 @@ export const JobListPage: React.FC<JobListPageProps> = ({ currentUser, onViewDet
       const postedJobs = JSON.parse(localStorage.getItem('kariyer_kapisi_posted_jobs') || '[]');
       allJobs = [...allJobs, ...postedJobs];
       
-      // İşveren ise sadece kendi ilanlarını göster
+      // İşveren ise sadece kendi ilanlarını + demo ilanları göster
       if (currentUser?.role === 'employer') {
-        allJobs = allJobs.filter(job => job.employerId === currentUser.id);
+        allJobs = allJobs.filter(job => !job.employerId || job.employerId === currentUser.id);
       }
       
       // Eşleşme puanını hesapla
