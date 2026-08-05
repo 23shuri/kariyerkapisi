@@ -62,22 +62,18 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
     setIsLoading(true);
     setError(null);
     try {
-      // Kendi profilimizi görüyorsak localStorage session'u da gönder — sunucu restart sonrası kurtarır
-      let url = `/api/user/${userId}`;
+      // Eğer kendi profiliniz ise, direkt currentUser'ı kullan
       if (currentUser?.id === userId) {
-        const sessionData = encodeURIComponent(JSON.stringify(currentUser));
-        url = `/api/user/${userId}?sessionData=${sessionData}`;
+        setUser(currentUser);
+        setViewCount((currentUser as any).profileViews || 0);
+        setIsLoading(false);
+        return;
       }
 
-      const res = await fetch(url);
+      // API'den dene
+      const res = await fetch(`/api/user/${userId}`);
       if (!res.ok) {
-        // 404 ise ve currentUser bu kişiyse — direkt currentUser'ı kullan
-        if (res.status === 404 && currentUser?.id === userId) {
-          setUser(currentUser);
-          setViewCount((currentUser as any).profileViews || 0);
-          setIsLoading(false);
-          return;
-        }
+        // 404 - localStorage'dan dene
         setError(res.status === 404 ? 'Kullanıcı bulunamadı' : 'Profil yüklenirken hata oluştu');
         return;
       }

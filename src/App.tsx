@@ -11,6 +11,7 @@ import { NotificationPanel } from './components/NotificationPanel';
 import { JobListPage } from './components/JobListPage';
 import { JobDetailPage } from './components/JobDetailPage';
 import { PublicProfilePage } from './components/PublicProfilePage';
+import { CompanyProfilePublic } from './components/CompanyProfilePublic';
 import { CompanyProfilePage, CompanyProfile } from './components/CompanyProfilePage';
 import { CandidateCVPage } from './components/CandidateCVPage';
 import { User, Role, Notification, Job } from './types';
@@ -222,16 +223,28 @@ function AppContent() {
       {/* Main Content Area */}
       <main className="flex-1">
         {activeView === 'profile' && viewingProfileUserId ? (
-          <PublicProfilePage 
-            userId={viewingProfileUserId}
-            currentUser={currentUser}
-            onProfileUpdated={handleProfileUpdated}
-            onBack={() => {
-              setActiveView('main');
-              setActiveMainView('home');
-              setViewingProfileUserId(null);
-            }}
-          />
+          currentUser?.role === 'employer' ? (
+            <CompanyProfilePublic 
+              userId={viewingProfileUserId}
+              currentUser={currentUser}
+              onBack={() => {
+                setActiveView('main');
+                setActiveMainView('home');
+                setViewingProfileUserId(null);
+              }}
+            />
+          ) : (
+            <PublicProfilePage 
+              userId={viewingProfileUserId}
+              currentUser={currentUser}
+              onProfileUpdated={handleProfileUpdated}
+              onBack={() => {
+                setActiveView('main');
+                setActiveMainView('home');
+                setViewingProfileUserId(null);
+              }}
+            />
+          )
         ) : activeView === 'notifications' && currentUser ? (
           <div className="min-h-screen bg-slate-50 py-8">
             <div className="max-w-4xl mx-auto px-4">

@@ -90,12 +90,17 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
         setStats(statsData);
       }
 
-      // Değerlendirmeleri getir
-      const reviewsRes = await fetch(`/api/reviews/${currentUser.id}`);
-      if (reviewsRes.ok) {
-        const reviewsData = await reviewsRes.json();
-        setAvgRating(reviewsData.averageRating || 0);
-        setTotalReviews(reviewsData.totalReviews || 0);
+      // Değerlendirmeleri getir - try-catch içine al
+      try {
+        const reviewsRes = await fetch(`/api/reviews/${currentUser.id}`);
+        if (reviewsRes.ok) {
+          const reviewsData = await reviewsRes.json();
+          setAvgRating(reviewsData.averageRating || 0);
+          setTotalReviews(reviewsData.totalReviews || 0);
+        }
+      } catch (err) {
+        console.error('Reviews fetch failed:', err);
+        // Sessiz geç
       }
     } catch (err) {
       console.error('Employer data fetch failed:', err);
@@ -266,32 +271,31 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
         });
       }
 
-      const response = await fetch(`/api/profile/${currentUser.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: editingName,
-          avatarUrl,
-          companyName: editingCompanyName,
-          companySector: editingCompanySector,
-          companySize: editingCompanySize,
-          companyCity: editingCompanyCity,
-          companyWebsite: editingCompanyWebsite,
-          companyDescription: editingCompanyDescription,
-          companyEmail: editingCompanyEmail,
-          companyPhone: editingCompanyPhone,
-          companyFoundedYear: editingCompanyFoundedYear,
-          companyBenefits: editingCompanyBenefits.split(',').map(s => s.trim()).filter(Boolean),
-          companyValues: editingCompanyValues.split(',').map(s => s.trim()).filter(Boolean),
-        })
-      });
+      const updatedUser = {
+        ...currentUser,
+        fullName: editingName,
+        avatarUrl,
+        companyName: editingCompanyName,
+        companySector: editingCompanySector,
+        companySize: editingCompanySize,
+        companyCity: editingCompanyCity,
+        companyWebsite: editingCompanyWebsite,
+        companyDescription: editingCompanyDescription,
+        companyEmail: editingCompanyEmail,
+        companyPhone: editingCompanyPhone,
+        companyFoundedYear: editingCompanyFoundedYear,
+        companyBenefits: editingCompanyBenefits.split(',').map(s => s.trim()).filter(Boolean),
+        companyValues: editingCompanyValues.split(',').map(s => s.trim()).filter(Boolean),
+      };
 
-      if (response.ok) {
-        window.location.reload();
-      } else {
-        const errorData = await response.json();
-        alert(`Profil kaydedilemedi: ${errorData.error || 'Bilinmeyen hata'}`);
-      }
+      // localStorage'a kaydet
+      localStorage.setItem('kariyer_kapisi_session', JSON.stringify(updatedUser));
+      
+      setShowProfileModal(false);
+      alert('✅ Şirket profili başarıyla kaydedildi!');
+      
+      // Sayfayı yenile
+      window.location.reload();
     } catch (err) {
       console.error('Profile save error:', err);
       alert('Profil güncellenirken hata oluştu.');
@@ -341,57 +345,11 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 text-slate-800">
       
-      {/* Employer Profile Card */}
-      <div className="mb-6 panel rounded-3xl p-5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600 text-white font-bold text-xl shadow-sm">
-              {((currentUser as any).companyName || currentUser.fullName).charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <h3 className="font-display text-base font-bold text-slate-900">
-                {(currentUser as any).companyName || currentUser.fullName}
-              </h3>
-              <div className="flex flex-wrap items-center gap-2 mt-1">
-                {(currentUser as any).companySector && (
-                  <span className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded-full">
-                    {(currentUser as any).companySector}
-                  </span>
-                )}
-                {(currentUser as any).companySize && (
-                  <span className="text-[10px] font-semibold bg-slate-50 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-full">
-                    👥 {(currentUser as any).companySize}
-                  </span>
-                )}
-                {(currentUser as any).companyCity && (
-                  <span className="text-[10px] font-semibold bg-slate-50 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-full">
-                    📍 {(currentUser as any).companyCity}
-                  </span>
-                )}
-                {totalReviews > 0 && (
-                  <span className="text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-                    ⭐ {avgRating} / 5 <span className="text-amber-500">({totalReviews} değerlendirme)</span>
-                  </span>
-                )}
-                {!(currentUser as any).companySector && !(currentUser as any).companySize && totalReviews === 0 && (
-                  <span className="text-[10px] text-slate-400">Şirket bilgileri henüz eklenmedi</span>
-                )}
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowProfileModal(true)}
-            className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold py-2 px-4 rounded-lg transition cursor-pointer"
-          >
-            <Building className="h-3.5 w-3.5" />
-            Profili Düzenle
-          </button>
-        </div>
-      </div>
+      {/* Employer Profile Card - REMOVED, now using inline panel below */}
 
-      {/* Aday Profilleri Butonu */}
-      {onViewCandidateCVs && (
-        <div className="mb-6 flex">
+      {/* Aday Profilleri Butonu + Profil Form */}
+      <div className="mb-6 flex gap-3">
+        {onViewCandidateCVs && (
           <button
             onClick={onViewCandidateCVs}
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2.5 rounded-xl transition shadow-sm"
@@ -399,6 +357,152 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
             <Users className="h-5 w-5" />
             Aday Profillerini Görüntüle
           </button>
+        )}
+        <button
+          onClick={() => {
+            console.log('[Profile Button] Clicked, current state:', showProfileModal);
+            setShowProfileModal(!showProfileModal);
+          }}
+          className="flex items-center gap-2 bg-slate-600 hover:bg-slate-700 text-white font-medium px-5 py-2.5 rounded-xl transition shadow-sm"
+        >
+          <Building className="h-5 w-5" />
+          {showProfileModal ? 'Formu Kapat' : 'Profili Düzenle'}
+        </button>
+      </div>
+
+      {/* Şirket Profil Form Panel */}
+      {showProfileModal && (
+        <div className="mb-8 bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-900 mb-5 flex items-center gap-2">
+            <Building className="h-5 w-5 text-emerald-600" />
+            Şirket Profili
+          </h2>
+
+          <form onSubmit={handleSaveProfile} className="space-y-5">
+
+            {/* Avatar + Şirket Adı */}
+            <div className="flex items-center gap-4 pb-4 border-b border-slate-100">
+              <div className="relative shrink-0">
+                {avatarPreview || currentUser.avatarUrl ? (
+                  <img src={avatarPreview || currentUser.avatarUrl || ''} alt="Logo" className="h-16 w-16 rounded-2xl object-cover ring-2 ring-slate-200" />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 font-bold text-2xl">
+                    {editingCompanyName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <label className="absolute -bottom-1 -right-1 bg-emerald-600 text-white p-1.5 rounded-full cursor-pointer hover:bg-emerald-700 transition">
+                  <Upload className="h-3 w-3" />
+                  <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+                </label>
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Şirket Adı *</label>
+                <input type="text" value={editingCompanyName} onChange={e => setEditingCompanyName(e.target.value)} required
+                  className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all" />
+              </div>
+            </div>
+
+            {/* Grid: Sektör, Çalışan Sayısı, Şehir, Kuruluş Yılı */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Sektör</label>
+                <select value={editingCompanySector} onChange={e => setEditingCompanySector(e.target.value)}
+                  className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all bg-white">
+                  <option value="">Seçin...</option>
+                  {['Teknoloji', 'Fintech', 'E-ticaret', 'Sağlık', 'Eğitim', 'Üretim', 'Lojistik', 'Perakende', 'Medya', 'Danışmanlık', 'Yapay Zeka', 'Veri & Analitik', 'Siber Güvenlik', 'Oyun', 'Diğer'].map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Çalışan Sayısı</label>
+                <select value={editingCompanySize} onChange={e => setEditingCompanySize(e.target.value)}
+                  className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all bg-white">
+                  <option value="">Seçin...</option>
+                  {['1-10 Çalışan', '10-50 Çalışan', '50-200 Çalışan', '200-500 Çalışan', '500-1000 Çalışan', '1000+ Çalışan'].map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Merkez Şehir</label>
+                <select value={editingCompanyCity} onChange={e => setEditingCompanyCity(e.target.value)}
+                  className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all bg-white">
+                  <option value="">Seçin...</option>
+                  {['İstanbul', 'Ankara', 'İzmir', 'Bursa', 'Antalya', 'Adana', 'Konya', 'Gaziantep', 'Kocaeli', 'Mersin', 'Diğer'].map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Kuruluş Yılı</label>
+                <input type="number" min="1900" max={new Date().getFullYear()} value={editingCompanyFoundedYear} onChange={e => setEditingCompanyFoundedYear(e.target.value)}
+                  placeholder="Örn: 2015"
+                  className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all" />
+              </div>
+            </div>
+
+            {/* Web Sitesi */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Web Sitesi</label>
+              <input type="text" value={editingCompanyWebsite} onChange={e => setEditingCompanyWebsite(e.target.value)}
+                placeholder="www.sirketiniz.com"
+                className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all" />
+            </div>
+
+            {/* E-posta + Telefon */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">İletişim E-postası</label>
+                <input type="email" value={editingCompanyEmail} onChange={e => setEditingCompanyEmail(e.target.value)}
+                  placeholder="ik@sirket.com"
+                  className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Telefon</label>
+                <input type="text" value={editingCompanyPhone} onChange={e => setEditingCompanyPhone(e.target.value)}
+                  placeholder="+90 212 000 00 00"
+                  className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all" />
+              </div>
+            </div>
+
+            {/* Şirket Açıklaması */}
+            <div>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Şirket Hakkında</label>
+              <textarea rows={3} value={editingCompanyDescription} onChange={e => setEditingCompanyDescription(e.target.value)}
+                placeholder="Şirketinizi kısaca tanıtın, misyon ve vizyonunuz..."
+                className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs outline-none focus:border-emerald-500 transition-all resize-none" />
+            </div>
+
+            {/* Yan Haklar + Değerler */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Yan Haklar <span className="font-normal text-slate-400">(virgülle ayırın)</span></label>
+                <input type="text" value={editingCompanyBenefits} onChange={e => setEditingCompanyBenefits(e.target.value)}
+                  placeholder="Sağlık sigortası, Yemek kartı, Uzaktan çalışma"
+                  className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Şirket Değerleri <span className="font-normal text-slate-400">(virgülle ayırın)</span></label>
+                <input type="text" value={editingCompanyValues} onChange={e => setEditingCompanyValues(e.target.value)}
+                  placeholder="İnovasyon, Şeffaflık, Ekip ruhu"
+                  className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all" />
+              </div>
+            </div>
+
+            {/* Submit Buttons */}
+            <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+              <button type="button" onClick={() => setShowProfileModal(false)}
+                className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-sm py-2 px-5 rounded-lg transition">
+                İptal
+              </button>
+              <button type="submit" disabled={isSavingProfile}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm py-2 px-6 rounded-lg transition disabled:opacity-50">
+                {isSavingProfile ? 'Kaydediliyor...' : 'Profili Kaydet'}
+              </button>
+            </div>
+
+          </form>
         </div>
       )}
 
@@ -717,149 +821,6 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
               </button>
             </div>
 
-          </div>
-        </div>
-      )}
-
-      {/* PROFILE EDIT MODAL */}
-      {showProfileModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setShowProfileModal(false)} />
-          
-          <div className="relative w-full max-w-xl overflow-hidden rounded-3xl bg-white shadow-2xl max-h-[90vh] flex flex-col">
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-emerald-50 to-white">
-              <h3 className="font-display text-lg font-bold text-slate-900">Şirket Profilini Düzenle</h3>
-              <button onClick={() => setShowProfileModal(false)} className="text-slate-400 hover:text-slate-600 rounded-full p-1.5 transition">✕</button>
-            </div>
-            
-            <form onSubmit={handleSaveProfile} className="p-5 overflow-y-auto flex-1 space-y-5">
-
-              {/* Avatar + Ad */}
-              <div className="flex items-center gap-4">
-                <div className="relative shrink-0">
-                  {avatarPreview || currentUser.avatarUrl ? (
-                    <img src={avatarPreview || currentUser.avatarUrl || ''} alt="Logo" className="h-16 w-16 rounded-2xl object-cover ring-2 ring-slate-200" />
-                  ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 font-bold text-2xl">
-                      {editingCompanyName.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <label className="absolute -bottom-1 -right-1 bg-emerald-600 text-white p-1.5 rounded-full cursor-pointer hover:bg-emerald-700 transition">
-                    <Upload className="h-3 w-3" />
-                    <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
-                  </label>
-                </div>
-                <div className="flex-1">
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Şirket Adı *</label>
-                  <input type="text" value={editingCompanyName} onChange={e => setEditingCompanyName(e.target.value)} required
-                    className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all" />
-                </div>
-              </div>
-
-              {/* Sektör + Çalışan Sayısı */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Sektör</label>
-                  <select value={editingCompanySector} onChange={e => setEditingCompanySector(e.target.value)}
-                    className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all bg-white">
-                    <option value="">Seçin...</option>
-                    {['Teknoloji', 'Fintech', 'E-ticaret', 'Sağlık', 'Eğitim', 'Üretim', 'Lojistik', 'Perakende', 'Medya', 'Danışmanlık', 'Yapay Zeka', 'Veri & Analitik', 'Siber Güvenlik', 'Oyun', 'Diğer'].map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Çalışan Sayısı</label>
-                  <select value={editingCompanySize} onChange={e => setEditingCompanySize(e.target.value)}
-                    className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all bg-white">
-                    <option value="">Seçin...</option>
-                    {['1-10 Çalışan', '10-50 Çalışan', '50-200 Çalışan', '200-500 Çalışan', '500-1000 Çalışan', '1000+ Çalışan'].map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Şehir + Kuruluş Yılı */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Merkez Şehir</label>
-                  <select value={editingCompanyCity} onChange={e => setEditingCompanyCity(e.target.value)}
-                    className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all bg-white">
-                    <option value="">Seçin...</option>
-                    {['İstanbul', 'Ankara', 'İzmir', 'Bursa', 'Antalya', 'Adana', 'Konya', 'Gaziantep', 'Kocaeli', 'Mersin', 'Diğer'].map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Kuruluş Yılı</label>
-                  <input type="number" min="1900" max={new Date().getFullYear()} value={editingCompanyFoundedYear} onChange={e => setEditingCompanyFoundedYear(e.target.value)}
-                    placeholder="Örn: 2015"
-                    className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all" />
-                </div>
-              </div>
-
-              {/* Web Sitesi */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Web Sitesi</label>
-                <input type="text" value={editingCompanyWebsite} onChange={e => setEditingCompanyWebsite(e.target.value)}
-                  placeholder="www.sirketiniz.com"
-                  className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all" />
-              </div>
-
-              {/* E-posta + Telefon */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">İletişim E-postası</label>
-                  <input type="email" value={editingCompanyEmail} onChange={e => setEditingCompanyEmail(e.target.value)}
-                    placeholder="ik@sirket.com"
-                    className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all" />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Telefon</label>
-                  <input type="text" value={editingCompanyPhone} onChange={e => setEditingCompanyPhone(e.target.value)}
-                    placeholder="+90 212 000 00 00"
-                    className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all" />
-                </div>
-              </div>
-
-              {/* Şirket Açıklaması */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Şirket Hakkında</label>
-                <textarea rows={3} value={editingCompanyDescription} onChange={e => setEditingCompanyDescription(e.target.value)}
-                  placeholder="Şirketinizi kısaca tanıtın..."
-                  className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-xs outline-none focus:border-emerald-500 transition-all resize-none" />
-              </div>
-
-              {/* Yan Haklar */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Yan Haklar <span className="font-normal text-slate-400">(virgülle ayırın)</span></label>
-                <input type="text" value={editingCompanyBenefits} onChange={e => setEditingCompanyBenefits(e.target.value)}
-                  placeholder="Özel sağlık sigortası, Yemek kartı, Uzaktan çalışma"
-                  className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all" />
-              </div>
-
-              {/* Şirket Değerleri */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Şirket Değerleri <span className="font-normal text-slate-400">(virgülle ayırın)</span></label>
-                <input type="text" value={editingCompanyValues} onChange={e => setEditingCompanyValues(e.target.value)}
-                  placeholder="İnovasyon, Şeffaflık, Ekip ruhu"
-                  className="block w-full rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-emerald-500 transition-all" />
-              </div>
-
-            </form>
-            
-            <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2">
-              <button type="button" onClick={() => setShowProfileModal(false)}
-                className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-semibold text-xs py-2 px-4 rounded-xl transition">
-                İptal
-              </button>
-              <button onClick={handleSaveProfile} disabled={isSavingProfile}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-2 px-5 rounded-xl transition disabled:opacity-50">
-                {isSavingProfile ? 'Kaydediliyor...' : 'Profili Kaydet'}
-              </button>
-            </div>
           </div>
         </div>
       )}
