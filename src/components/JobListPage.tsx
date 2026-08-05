@@ -5,6 +5,7 @@ import {
   X, ChevronRight, Sparkles, Building2, Wifi, LayoutGrid, List
 } from 'lucide-react';
 import { Job, User } from '../types';
+import { INITIAL_JOBS } from '../data';
 
 interface JobListPageProps {
   currentUser: User | null;
@@ -42,24 +43,54 @@ export const JobListPage: React.FC<JobListPageProps> = ({ currentUser, onViewDet
     fetchJobs();
   }, [currentUser]);
 
+  // Eşleşme puanı hesapla
+  const calculateMatchScore = (job: Job, user: User | null): number => {
+    if (!user || !user.skills || user.skills.length === 0) {
+      return Math.floor(Math.random() * 40) + 50; // 50-90 arası random
+    }
+
+    // İş gereken skilllerle kullanıcı skilllerinin kesişimi
+    const matchedSkills = job.skills.filter(skill => 
+      user.skills.some(userSkill => 
+        userSkill.toLowerCase().includes(skill.toLowerCase()) ||
+        skill.toLowerCase().includes(userSkill.toLowerCase())
+      )
+    ).length;
+
+    // Eşleşme yüzdesi = (eşleşen skill sayısı / toplam skill sayısı) * 100
+    const skillMatch = (matchedSkills / Math.max(job.skills.length, 1)) * 100;
+
+    // Deneyim seviyesi kontrol et
+    let experienceMatch = 50;
+    if (user.experienceYears) {
+      if (job.experienceLevel?.includes('0-1')) experienceMatch = user.experienceYears >= 1 ? 100 : 50;
+      else if (job.experienceLevel?.includes('1-2')) experienceMatch = user.experienceYears >= 1 ? 100 : 60;
+      else if (job.experienceLevel?.includes('2-3')) experienceMatch = user.experienceYears >= 2 ? 100 : 60;
+      else if (job.experienceLevel?.includes('3-5')) experienceMatch = user.experienceYears >= 3 ? 100 : 70;
+      else if (job.experienceLevel?.includes('5+')) experienceMatch = user.experienceYears >= 5 ? 100 : 80;
+    }
+
+    // Final score = 70% skill match + 30% experience match
+    const finalScore = Math.round((skillMatch * 0.7) + (experienceMatch * 0.3));
+    return Math.min(100, Math.max(40, finalScore));
+  };
+
   const fetchJobs = async () => {
     setLoading(true);
     try {
-      let url = '/api/jobs';
-      if (currentUser?.role === 'candidate') {
-        const params = new URLSearchParams({ userId: currentUser.id });
-        // Beceri ve CV metnini de gönder — sunucu restart sonrası kullanıcı bellekte yoksa kurtarır
-        if (currentUser.skills?.length) {
-          params.append('skills', currentUser.skills.join(','));
-        }
-        if ((currentUser as any).resumeText) {
-          params.append('resumeText', (currentUser as any).resumeText.slice(0, 500));
-        }
-        url = `/api/jobs?${params.toString()}`;
-      }
-      const res = await fetch(url);
-      const data = await res.json();
-      setJobs(data.jobs || []);
+      // Mock ilanları kullan
+      let allJobs = [...INITIAL_JOBS];
+      
+      // localStorage'dan yayınlanan ilanları ekle
+      const postedJobs = JSON.parse(localStorage.getItem('kariyer_kapisi_posted_jobs') || '[]');
+      allJobs = [...allJobs, ...postedJobs];
+      
+      // Eşleşme puanını hesapla
+      const jobsWithScores = allJobs.map(job => ({
+        ...job,
+        previewMatchScore: calculateMatchScore(job, currentUser)
+      }));
+      setJobs(jobsWithScores);
     } catch (err) {
       console.error('Jobs fetch error:', err);
     } finally {

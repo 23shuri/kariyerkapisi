@@ -32,11 +32,41 @@ export const SavedJobsPage: React.FC<SavedJobsPageProps> = ({ currentUser, onBac
   const fetchSavedJobs = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/saved-jobs?userId=${currentUser.id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setSavedJobs(data.savedJobs || []);
-      }
+      // localStorage'dan kaydedilen ilanları oku
+      const savedJobsData = JSON.parse(localStorage.getItem('kariyer_kapisi_saved_jobs') || '[]');
+      
+      // Sadece bu kullanıcının kaydedilmiş ilanlarını filtrele
+      const userSavedJobs = savedJobsData.filter((s: any) => s.userId === currentUser.id);
+      
+      // Mock ilanları ve yayınlanan ilanları bir araya getir
+      const { INITIAL_JOBS } = await import('../data');
+      let allJobs = [...INITIAL_JOBS];
+      
+      const postedJobs = JSON.parse(localStorage.getItem('kariyer_kapisi_posted_jobs') || '[]');
+      allJobs = [...allJobs, ...postedJobs];
+      
+      // Kaydedilmiş ilanlarla birleştir
+      const savedJobsWithDetails = userSavedJobs.map((saved: any) => {
+        const job = allJobs.find(j => j.id === saved.jobId);
+        return {
+          savedJob: saved,
+          job: job || {
+            id: saved.jobId,
+            title: saved.jobTitle,
+            company: saved.company,
+            location: 'Bilgi yok',
+            type: 'Bilgi yok',
+            skills: [],
+            description: '',
+            salaryRange: '',
+            postedAt: '',
+            applicationCount: 0,
+            candidateMatchesCount: 0,
+          }
+        };
+      });
+      
+      setSavedJobs(savedJobsWithDetails);
     } catch (err) {
       console.error('Failed to fetch saved jobs:', err);
     } finally {
@@ -44,15 +74,14 @@ export const SavedJobsPage: React.FC<SavedJobsPageProps> = ({ currentUser, onBac
     }
   };
 
-  const handleRemoveSavedJob = async (savedJobId: string) => {
+  const handleRemoveSavedJob = async (jobId: string) => {
     try {
-      const res = await fetch(`/api/saved-jobs/${savedJobId}`, {
-        method: 'DELETE'
-      });
-
-      if (res.ok) {
-        fetchSavedJobs();
-      }
+      // localStorage'dan kaldır
+      const savedJobsData = JSON.parse(localStorage.getItem('kariyer_kapisi_saved_jobs') || '[]');
+      const filtered = savedJobsData.filter((s: any) => !(s.jobId === jobId && s.userId === currentUser.id));
+      localStorage.setItem('kariyer_kapisi_saved_jobs', JSON.stringify(filtered));
+      
+      fetchSavedJobs();
     } catch (err) {
       console.error('Failed to remove saved job:', err);
     }
@@ -190,7 +219,7 @@ export const SavedJobsPage: React.FC<SavedJobsPageProps> = ({ currentUser, onBac
                   {/* Actions */}
                   <div className="flex flex-col gap-2 shrink-0">
                     <button
-                      onClick={() => handleRemoveSavedJob(savedJob.savedJob.id)}
+                      onClick={() => handleRemoveSavedJob(savedJob.savedJob.jobId)}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
                       title="Kaldır"
                     >

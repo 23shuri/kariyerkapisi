@@ -191,3 +191,20 @@ export interface Review {
   createdAt: string;
   applicationId: string;
 }
+
+export interface CandidateCV {
+  id: string;
+  candidateId: string;
+  candidateName: string;
+  candidateAvatarUrl?: string;
+  title: string;           // Aranan pozisyon
+  location: string;        // Konum tercihi
+  workPreference: 'Uzaktan' | 'Hibrit' | 'Ofisten' | 'Fark etmez';
+  skills: string[];
+  experienceYears: number;
+  experienceLevel: string; // '0-1 Yıl', '1-2 Yıl' vs.
+  salaryExpectation: string;
+  summary: string;         // Özet / hakkında
+  publishedAt: string;
+  isActive: boolean;
+}
