@@ -45,11 +45,14 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
   useEffect(() => {
+    console.log('[DEBUG] useEffect called - userId:', userId, 'activeTab:', activeTab);
     fetchUserProfile();
     incrementViewCount();
     if (activeTab === 'friends') {
+      console.log('[DEBUG] Loading friends for userId:', userId);
       fetchFriends();
     } else if (activeTab === 'connections' && currentUser) {
+      console.log('[DEBUG] Loading suggestions for currentUser:', currentUser.id);
       fetchSuggestions();
     }
   }, [userId, activeTab]);
@@ -1313,6 +1316,7 @@ const UserConnectionCard: React.FC<UserConnectionCardProps> = ({
     e.preventDefault();
     e.stopPropagation();
     console.log('[DEBUG] View profile clicked for:', user.fullName, user.id);
+    console.log('[DEBUG] onNavigateToProfile function:', onViewProfile);
     onViewProfile();
   };
 
