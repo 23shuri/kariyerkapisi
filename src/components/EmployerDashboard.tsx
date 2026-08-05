@@ -665,7 +665,7 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
                         </span>
 
                         {/* Accept/Reject buttons OR Status selector */}
-                        {app.status === 'Yeni' || app.status === 'Mülakat' ? (
+                        {app.status === 'Yeni' || app.status === 'Mülakat' || app.status === 'pending' || !app.status ? (
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleApplicationDecision(app.id, 'accept')}

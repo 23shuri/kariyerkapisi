@@ -402,7 +402,7 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({
                             company: job.company,
                             candidateId: currentUser.id,
                             appliedAt: new Date().toLocaleString('tr-TR'),
-                            status: 'pending',
+                            status: 'Yeni',
                             matchScore: Math.min(100, Math.max(40, matchScore)),
                           };
                           applications.push(newApplication);
