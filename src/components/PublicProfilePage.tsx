@@ -311,7 +311,7 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
                       />
                     ) : (
                       <div className="h-32 w-32 rounded-2xl border-4 border-white bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-4xl shadow-lg">
-                        {user.fullName.charAt(0)}
+                        {(user.fullName || '?').charAt(0)}
                       </div>
                     )}
                     {isOwnProfile && (
@@ -915,7 +915,7 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
                             />
                           ) : (
                             <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-lg">
-                              {friend.fullName.charAt(0)}
+                              {(friend.fullName || '?').charAt(0)}
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
@@ -1164,7 +1164,7 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
               />
             ) : (
               <div className="h-28 w-28 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-4xl border-4 border-slate-200 shadow">
-                {user?.fullName?.charAt(0)}
+                {(user?.fullName || '?').charAt(0)}
               </div>
             )}
           </div>
@@ -1255,7 +1255,7 @@ const UserConnectionCard: React.FC<UserConnectionCardProps> = ({ person, onNavig
           />
         ) : (
           <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-lg">
-            {person.fullName.charAt(0)}
+            {(person.fullName || '?').charAt(0)}
           </div>
         )}
         <div className="flex-1 min-w-0">

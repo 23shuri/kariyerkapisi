@@ -157,7 +157,7 @@ export const CompanyProfilePublic: React.FC<CompanyProfilePublicProps> = ({
                       />
                     ) : (
                       <div className="h-32 w-32 rounded-2xl border-4 border-white bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center font-bold text-4xl shadow-lg">
-                        {companyName && companyName.charAt(0)}
+                        {(companyName || '?').charAt(0)}
                       </div>
                     )}
                   </div>

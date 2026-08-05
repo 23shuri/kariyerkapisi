@@ -355,7 +355,7 @@ export const NetworkDashboard: React.FC<NetworkDashboardProps> = ({ currentUser 
                           <img src={req.fromUser.avatarUrl} alt={req.fromUser.fullName} className="h-12 w-12 rounded-lg object-cover" />
                         ) : (
                           <div className="h-12 w-12 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
-                            {req.fromUser?.fullName.charAt(0)}
+                            {(req.fromUser?.fullName || '?').charAt(0)}
                           </div>
                         )}
                         <div>
@@ -415,7 +415,7 @@ export const NetworkDashboard: React.FC<NetworkDashboardProps> = ({ currentUser 
                         <img src={suggestion.user.avatarUrl} alt={suggestion.user.fullName} className="h-14 w-14 rounded-lg object-cover group-hover:opacity-90 transition" />
                       ) : (
                         <div className="h-14 w-14 rounded-lg bg-gradient-to-br from-blue-100 to-purple-100 text-blue-600 flex items-center justify-center font-bold text-lg group-hover:opacity-90 transition">
-                          {suggestion.user.fullName.charAt(0)}
+                          {(suggestion.user.fullName || '?').charAt(0)}
                         </div>
                       )}
                       <div className="flex-1">
@@ -503,7 +503,7 @@ export const NetworkDashboard: React.FC<NetworkDashboardProps> = ({ currentUser 
                       <img src={conn.user.avatarUrl} alt={conn.user.fullName} className="h-12 w-12 rounded-lg object-cover group-hover:opacity-90 transition" />
                     ) : (
                       <div className="h-12 w-12 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold group-hover:opacity-90 transition">
-                        {conn.user.fullName.charAt(0)}
+                        {(conn.user.fullName || '?').charAt(0)}
                       </div>
                     )}
                     <div className="flex-1">
@@ -583,7 +583,7 @@ export const NetworkDashboard: React.FC<NetworkDashboardProps> = ({ currentUser 
                           <img src={conv.partnerAvatar} alt={conv.partnerName} className="h-10 w-10 rounded-lg object-cover" />
                         ) : (
                           <div className="h-10 w-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm">
-                            {conv.partnerName.charAt(0)}
+                            {(conv.partnerName || '?').charAt(0)}
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
@@ -621,7 +621,7 @@ export const NetworkDashboard: React.FC<NetworkDashboardProps> = ({ currentUser 
                             <img src={conv.partnerAvatar} alt={conv.partnerName} className="h-10 w-10 rounded-lg object-cover" />
                           ) : (
                             <div className="h-10 w-10 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
-                              {conv.partnerName.charAt(0)}
+                              {(conv.partnerName || '?').charAt(0)}
                             </div>
                           )}
                           <div>
@@ -766,7 +766,7 @@ export const NetworkDashboard: React.FC<NetworkDashboardProps> = ({ currentUser 
                         <img src={suggestion.user.avatarUrl} alt={suggestion.user.fullName} className="h-12 w-12 rounded-lg object-cover group-hover:opacity-90 transition" />
                       ) : (
                         <div className="h-12 w-12 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center font-bold group-hover:opacity-90 transition">
-                          {suggestion.user.fullName.charAt(0)}
+                          {(suggestion.user.fullName || '?').charAt(0)}
                         </div>
                       )}
                       <div className="flex-1">

@@ -61,51 +61,23 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
   const [isLoadingMatch, setIsLoadingMatch] = useState(false);
   const [cvDetailText, setCvDetailText] = useState<string | null>(null);
 
-  const fetchData = async () => {
-    try {
-      const jobsRes = await fetch('/api/jobs');
-      if (jobsRes.ok) {
-        const jobsData = await jobsRes.json();
-        setJobs(jobsData.jobs || []);
-      } else {
-        // API kapalı - localStorage'dan mock ilanları yükle
-        const postedJobs = JSON.parse(localStorage.getItem('kariyer_kapisi_posted_jobs') || '[]');
-        const userJobs = postedJobs.filter((job: any) => job.employerId === currentUser.id);
-        setJobs(userJobs);
-      }
+  const fetchData = () => {
+    // Tüm veriler localStorage'dan yükleniyor (backend offline)
+    const postedJobs = JSON.parse(localStorage.getItem('kariyer_kapisi_posted_jobs') || '[]');
+    setJobs(postedJobs);
 
-      const appsRes = await fetch(`/api/applications?userId=${currentUser.id}&role=employer`);
-      if (appsRes.ok) {
-        const appsData = await appsRes.json();
-        setApplications(appsData.applications || []);
-      } else {
-        // API kapalı - localStorage'dan başvuruları yükle
-        const allApplications = JSON.parse(localStorage.getItem('kariyer_kapisi_applications') || '[]');
-        setApplications(allApplications);
-      }
+    const allApplications = JSON.parse(localStorage.getItem('kariyer_kapisi_applications') || '[]');
+    setApplications(allApplications);
 
-      const statsRes = await fetch('/api/stats/employer');
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setStats(statsData);
-      }
-
-      // Değerlendirmeleri getir - try-catch içine al
-      try {
-        const reviewsRes = await fetch(`/api/reviews/${currentUser.id}`);
-        if (reviewsRes.ok) {
-          const reviewsData = await reviewsRes.json();
-          setAvgRating(reviewsData.averageRating || 0);
-          setTotalReviews(reviewsData.totalReviews || 0);
-        }
-      } catch (err) {
-        console.error('Reviews fetch failed:', err);
-        // Sessiz geç
-      }
-    } catch (err) {
-      console.error('Employer data fetch failed:', err);
-      // Sessiz geç - localStorage'dan mock veriler yüklenmiş
-    }
+    // Stats hesapla
+    const highMatchApps = allApplications.filter((a: any) => (a.matchScore || 0) >= 80);
+    const interviewApps = allApplications.filter((a: any) => a.status === 'Mülakat');
+    setStats({
+      totalJobs: postedJobs.length,
+      totalApplications: allApplications.length,
+      highMatches: highMatchApps.length,
+      inInterview: interviewApps.length,
+    });
   };
 
   useEffect(() => {
@@ -113,7 +85,7 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
   }, [currentUser.id]);
 
   // Handle post new job
-  const handlePostJob = async (e: React.FormEvent) => {
+  const handlePostJob = (e: React.FormEvent) => {
     e.preventDefault();
     setIsPosting(true);
 
@@ -140,120 +112,46 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
       companyDescription: (currentUser as any).companyDescription || '',
       companyAvatarUrl: currentUser.avatarUrl || '',
     };
-    
-    console.log('Posting job data:', jobData);
 
-    try {
-      const response = await fetch('/api/jobs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(jobData)
-      });
-      
-      console.log('Response status:', response.status);
-      
-      if (!response.ok) {
-        // Backend kapalı - mock olarak localStorage'a kaydet
-        console.warn('API kapalı, mock olarak localStorage\'a kaydediliyor');
-        const postedJobs = JSON.parse(localStorage.getItem('kariyer_kapisi_posted_jobs') || '[]');
-        postedJobs.push(jobData);
-        localStorage.setItem('kariyer_kapisi_posted_jobs', JSON.stringify(postedJobs));
-        
-        setShowPostJob(false);
-        // Reset form
-        setJobTitle('');
-        setJobLocation('');
-        setJobSkills('');
-        setJobDescription('');
-        
-        alert('✅ İlan başarıyla yayınlandı! (Demo Mode)');
-        await fetchData();
-      } else {
-        const responseData = await response.json();
-        console.log('Response data:', responseData);
+    const postedJobs = JSON.parse(localStorage.getItem('kariyer_kapisi_posted_jobs') || '[]');
+    postedJobs.push(jobData);
+    localStorage.setItem('kariyer_kapisi_posted_jobs', JSON.stringify(postedJobs));
 
-        setShowPostJob(false);
-        // Reset form
-        setJobTitle('');
-        setJobLocation('');
-        setJobSkills('');
-        setJobDescription('');
-        
-        alert('✅ İlan başarıyla yayınlandı!');
-        await fetchData();
-      }
-    } catch (err) {
-      console.error('Post job failed:', err);
-      
-      // Bağlantı hatası - mock olarak localStorage'a kaydet
-      const postedJobs = JSON.parse(localStorage.getItem('kariyer_kapisi_posted_jobs') || '[]');
-      postedJobs.push(jobData);
-      localStorage.setItem('kariyer_kapisi_posted_jobs', JSON.stringify(postedJobs));
-      
-      setShowPostJob(false);
-      // Reset form
-      setJobTitle('');
-      setJobLocation('');
-      setJobSkills('');
-      setJobDescription('');
-      
-      alert('✅ İlan başarıyla yayınlandı! (Demo Mode)');
-      await fetchData();
-    } finally {
-      setIsPosting(false);
-    }
+    setShowPostJob(false);
+    setJobTitle('');
+    setJobLocation('');
+    setJobSkills('');
+    setJobDescription('');
+    setIsPosting(false);
+    fetchData();
+    alert('✅ İlan başarıyla yayınlandı!');
   };
 
   // Handle delete job
-  const handleDeleteJob = async (jobId: string) => {
+  const handleDeleteJob = (jobId: string) => {
     if (!window.confirm('Bu ilanı silmek istediğinize emin misiniz?')) return;
-    
-    try {
-      const res = await fetch(`/api/jobs/${jobId}`, {
-        method: 'DELETE'
-      });
-      if (res.ok) {
-        await fetchData();
-      }
-    } catch (err) {
-      console.error('Delete job failed:', err);
-    }
+    const postedJobs = JSON.parse(localStorage.getItem('kariyer_kapisi_posted_jobs') || '[]');
+    const filtered = postedJobs.filter((j: any) => j.id !== jobId);
+    localStorage.setItem('kariyer_kapisi_posted_jobs', JSON.stringify(filtered));
+    fetchData();
   };
 
-  // Handle Application status change
-  const handleStatusChange = async (appId: string, newStatus: string) => {
-    try {
-      const res = await fetch(`/api/applications/${appId}/status`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
-      });
-
-      if (res.ok) {
-        await fetchData();
-      }
-    } catch (err) {
-      console.error('Update status failed:', err);
-    }
+  // Handle Application status change - localStorage only
+  const handleStatusChange = (appId: string, newStatus: string) => {
+    const allApps = JSON.parse(localStorage.getItem('kariyer_kapisi_applications') || '[]');
+    const updated = allApps.map((a: any) => a.id === appId ? { ...a, status: newStatus } : a);
+    localStorage.setItem('kariyer_kapisi_applications', JSON.stringify(updated));
+    fetchData();
   };
 
-  // Handle Accept/Reject Decision with Notification
-  const handleApplicationDecision = async (appId: string, decision: 'accept' | 'reject') => {
-    try {
-      const res = await fetch(`/api/applications/${appId}/decision`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ decision })
-      });
-
-      if (res.ok) {
-        await fetchData();
-        // Trigger notification refresh in parent
-        onNotificationChange?.();
-      }
-    } catch (err) {
-      console.error('Decision update failed:', err);
-    }
+  // Handle Accept/Reject Decision - localStorage only
+  const handleApplicationDecision = (appId: string, decision: 'accept' | 'reject') => {
+    const newStatus = decision === 'accept' ? 'Kabul Edildi' : 'Reddedildi';
+    const allApps = JSON.parse(localStorage.getItem('kariyer_kapisi_applications') || '[]');
+    const updated = allApps.map((a: any) => a.id === appId ? { ...a, status: newStatus } : a);
+    localStorage.setItem('kariyer_kapisi_applications', JSON.stringify(updated));
+    fetchData();
+    onNotificationChange?.();
   };
 
   // Handle Save Profile
@@ -387,7 +285,7 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
                   <img src={avatarPreview || currentUser.avatarUrl || ''} alt="Logo" className="h-16 w-16 rounded-2xl object-cover ring-2 ring-slate-200" />
                 ) : (
                   <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 font-bold text-2xl">
-                    {editingCompanyName.charAt(0).toUpperCase()}
+                    {(editingCompanyName || '?').charAt(0).toUpperCase()}
                   </div>
                 )}
                 <label className="absolute -bottom-1 -right-1 bg-emerald-600 text-white p-1.5 rounded-full cursor-pointer hover:bg-emerald-700 transition">
@@ -602,7 +500,7 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
                             />
                           ) : (
                             <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700 font-semibold text-sm">
-                              {app.candidateName.charAt(0).toUpperCase()}
+                              {(app?.candidateName || '?').charAt(0).toUpperCase()}
                             </div>
                           )}
                           <div>

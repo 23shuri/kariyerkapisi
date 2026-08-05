@@ -162,7 +162,7 @@ export const CandidateCVPage: React.FC<CandidateCVPageProps> = ({ employerJobs, 
                         className="h-12 w-12 rounded-xl object-cover border border-slate-200 shrink-0" />
                     ) : (
                       <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shrink-0">
-                        {cv.candidateName.charAt(0)}
+                        {(cv?.candidateName || '?').charAt(0)}
                       </div>
                     )}
 

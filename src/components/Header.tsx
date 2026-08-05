@@ -230,7 +230,7 @@ export const Header: React.FC<HeaderProps> = ({
                     />
                   ) : (
                     <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-400 to-blue-500 flex items-center justify-center text-white font-bold text-sm">
-                      {currentUser.fullName.charAt(0)}
+                      {(currentUser?.fullName || '?').charAt(0)}
                     </div>
                   )}
                 </button>
