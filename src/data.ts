@@ -21,6 +21,7 @@ export const INITIAL_JOBS: Job[] = [
     companyCity: 'İstanbul',
     companyWebsite: 'www.techcorp.com.tr',
     companyDescription: 'TechCorp A.Ş., 2015 yılından bu yana Türkiye\'nin önde gelen yazılım şirketleri arasında yer almaktadır. Kurumsal ve KOBİ müşterilerine yönelik yenilikçi dijital çözümler geliştiriyoruz.',
+    previewMatchScore: 88,
   },
   {
     id: 'job_2',
@@ -40,6 +41,7 @@ export const INITIAL_JOBS: Job[] = [
     companyCity: 'Ankara',
     companyWebsite: 'www.dataminds.io',
     companyDescription: 'DataMinds, yapay zeka ve makine öğrenmesi alanında uzmanlaşmış bir veri şirketidir. Müşterilerimize özel analitik çözümler ve tahminleme modelleri geliştiriyoruz.',
+    previewMatchScore: 72,
   },
   {
     id: 'job_3',
@@ -59,6 +61,7 @@ export const INITIAL_JOBS: Job[] = [
     companyCity: 'İzmir',
     companyWebsite: 'www.finanssoft.com',
     companyDescription: 'FinansSoft, bankacılık ve finans sektörüne yönelik yazılım çözümleri geliştiren köklü bir teknoloji şirketidir. 10 yılı aşkın deneyimimizle 50\'den fazla finans kuruluşuna hizmet veriyoruz.',
+    previewMatchScore: 65,
   },
   {
     id: 'job_4',
@@ -78,6 +81,7 @@ export const INITIAL_JOBS: Job[] = [
     companyCity: 'İstanbul',
     companyWebsite: 'www.techvision.ai',
     companyDescription: 'TechVision Analytics, yapay zeka ve derin öğrenme alanında Türkiye\'nin öncü ar-ge şirketlerinden biridir. NLP, computer vision ve predictive analytics konularında dünya standartlarında çözümler üretiyoruz.',
+    previewMatchScore: 92,
   }
 ];
 

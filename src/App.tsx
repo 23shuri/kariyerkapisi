@@ -12,10 +12,14 @@ import { JobListPage } from './components/JobListPage';
 import { JobDetailPage } from './components/JobDetailPage';
 import { PublicProfilePage } from './components/PublicProfilePage';
 import { CompanyProfilePage, CompanyProfile } from './components/CompanyProfilePage';
+import { CandidateCVPage } from './components/CandidateCVPage';
 import { User, Role, Notification, Job } from './types';
+import { CandidateCV } from './types';
 import { Bell } from 'lucide-react';
+import { LanguageProvider } from './contexts/LanguageContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
-export default function App() {
+function AppContent() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authRole, setAuthRole] = useState<Role>('candidate');
@@ -24,8 +28,9 @@ export default function App() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [activeTab, setActiveTab] = useState<'home' | 'applications'>('home');
   const [activeMainView, setActiveMainView] = useState<'dashboard' | 'network'>('dashboard');
-  const [activeView, setActiveView] = useState<'main' | 'savedJobs' | 'notifications' | 'jobList' | 'jobDetail' | 'companyProfile' | 'profile'>('main');
+  const [activeView, setActiveView] = useState<'main' | 'savedJobs' | 'notifications' | 'jobList' | 'jobDetail' | 'companyProfile' | 'profile' | 'candidateCVs'>('main');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [selectedCV, setSelectedCV] = useState<CandidateCV | null>(null);
   const [selectedCompany, setSelectedCompany] = useState<CompanyProfile | null>(null);
   const [companyJobs, setCompanyJobs] = useState<Job[]>([]);
   const [viewingProfileUserId, setViewingProfileUserId] = useState<string | null>(null);
@@ -57,13 +62,14 @@ export default function App() {
     if (!currentUser) return;
     try {
       const res = await fetch(`/api/notifications?userId=${currentUser.id}`);
+      if (!res.ok) return; // Backend kapalı - sessiz geç
       const data = await res.json();
-      if (res.ok) {
+      if (data) {
         setNotifications(data.notifications || []);
         setUnreadCount(data.unreadCount || 0);
       }
     } catch (err) {
-      console.error('Notification fetch error:', err);
+      // API kapalı, hata yok - sessiz geç
     }
   };
 
@@ -220,12 +226,6 @@ export default function App() {
             userId={viewingProfileUserId}
             currentUser={currentUser}
             onProfileUpdated={handleProfileUpdated}
-            onNavigateToProfile={(userId) => {
-              console.log('[DEBUG] App.tsx - navigating to profile:', userId);
-              setViewingProfileUserId(userId);
-              setActiveView('profile');
-              console.log('[DEBUG] App.tsx - activeView set to profile');
-            }}
             onBack={() => {
               setActiveView('main');
               setActiveMainView('home');
@@ -239,7 +239,7 @@ export default function App() {
                 onClick={() => setActiveView('main')}
                 className="mb-4 text-sm text-slate-600 hover:text-slate-900 flex items-center gap-2"
               >
-                ← Geri
+                ← Back
               </button>
               <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
                 <div className="flex items-center justify-between mb-6">
@@ -304,7 +304,6 @@ export default function App() {
               onOpenAuth={handleOpenAuth}
             />
           ) : (
-            // Giriş yapılmamışsa login modal aç ve ana sayfaya dön
             (() => {
               setActiveView('main');
               setShowAuthModal(true);
@@ -335,6 +334,12 @@ export default function App() {
             onBack={() => setActiveView('jobDetail')}
             onViewJob={(job) => { setSelectedJob(job); setActiveView('jobDetail'); }}
           />
+        ) : activeView === 'candidateCVs' && currentUser?.role === 'employer' ? (
+          <CandidateCVPage
+            employerJobs={JSON.parse(localStorage.getItem('kariyer_kapisi_posted_jobs') || '[]')
+              .filter((j: Job) => j.employerId === currentUser.id)}
+            onViewDetail={(cv) => { setSelectedCV(cv); }}
+          />
         ) : currentUser ? (
           currentUser.role === 'admin' ? (
             <AdminDashboard currentUser={currentUser} />
@@ -356,6 +361,7 @@ export default function App() {
             <EmployerDashboard 
               currentUser={currentUser}
               onNotificationChange={fetchNotifications}
+              onViewCandidateCVs={() => setActiveView('candidateCVs')}
             />
           )
         ) : (
@@ -414,5 +420,15 @@ export default function App() {
         />
       )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <LanguageProvider>
+      <ErrorBoundary>
+        <AppContent />
+      </ErrorBoundary>
+    </LanguageProvider>
   );
 }

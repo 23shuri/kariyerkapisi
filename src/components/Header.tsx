@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Briefcase, LogOut, User as UserIcon, Bell, Users, Home, FileText, Bookmark } from 'lucide-react';
+import { Briefcase, LogOut, User as UserIcon, Bell, Users, Home, FileText, Bookmark, Globe } from 'lucide-react';
 import { User } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface HeaderProps {
   currentUser: User | null;
@@ -30,6 +31,8 @@ export const Header: React.FC<HeaderProps> = ({
   onMainViewChange
 }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showLanguageMenu, setShowLanguageMenu] = useState(false);
+  const { t, language, setLanguage } = useLanguage();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur-md">
@@ -47,7 +50,7 @@ export const Header: React.FC<HeaderProps> = ({
               <h1 className="font-display text-lg font-bold tracking-tight text-slate-900 flex items-center">
                 Kariyer<span className="text-emerald-600 ml-1">Kapısı</span>
               </h1>
-              <p className="text-[9px] font-medium tracking-wider text-slate-400 uppercase">YAPAY ZEKA DESTEKLİ KARİYER</p>
+              <p className="text-[9px] font-medium tracking-wider text-slate-400 uppercase">{t('common.tagline')}</p>
             </div>
           </div>
 
@@ -64,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <Briefcase className="h-4 w-4" />
-                İş İlanları
+                {t('header.jobs')}
               </button>
 
               <button
@@ -76,7 +79,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <Home className="h-4 w-4" />
-                Anasayfa
+                {t('header.home')}
               </button>
               
               {currentUser.role === 'candidate' && (
@@ -89,7 +92,7 @@ export const Header: React.FC<HeaderProps> = ({
                   }`}
                 >
                   <FileText className="h-4 w-4" />
-                  Başvurularım
+                  {t('header.applications')}
                 </button>
               )}
 
@@ -102,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <Users className="h-4 w-4" />
-                Network
+                {t('header.network')}
               </button>
 
               <button
@@ -114,22 +117,22 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <UserIcon className="h-4 w-4" />
-                Profilim
+                {t('header.profile')}
               </button>
             </nav>
           )}
         </div>
 
         {/* Right Side Actions */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2">
           {currentUser ? (
             <>
               {/* Kaydedilen İlanlar */}
               {currentUser.role === 'candidate' && onNavigateToSavedJobs && (
                 <button
                   onClick={onNavigateToSavedJobs}
-                  className="relative p-2 text-slate-600 hover:text-emerald-600 hover:bg-slate-50 rounded-lg transition"
-                  title="Kaydedilen İlanlar"
+                  className="hidden sm:flex relative p-2 text-slate-600 hover:text-emerald-600 hover:bg-slate-50 rounded-lg transition"
+                  title={t('header.savedJobs')}
                 >
                   <Bookmark className="h-5 w-5" />
                 </button>
@@ -139,8 +142,8 @@ export const Header: React.FC<HeaderProps> = ({
               {onOpenNotifications && (
                 <button
                   onClick={onOpenNotifications}
-                  className="relative p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-50 rounded-lg transition"
-                  title="Bildirimler"
+                  className="hidden sm:flex relative p-2 text-slate-600 hover:text-blue-600 hover:bg-slate-50 rounded-lg transition"
+                  title={t('header.notifications')}
                 >
                   <Bell className="h-5 w-5" />
                   {unreadCount > 0 && (
@@ -151,6 +154,68 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               )}
 
+              {/* Dil Seçici Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowLanguageMenu(!showLanguageMenu)}
+                  className="flex items-center gap-2 p-2 hover:bg-slate-50 rounded-lg transition text-slate-600 hover:text-emerald-600"
+                >
+                  <Globe className="h-5 w-5" />
+                  <span className="text-sm font-medium">{language.toUpperCase()}</span>
+                </button>
+
+                {/* Language Dropdown Menu */}
+                {showLanguageMenu && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setShowLanguageMenu(false)}
+                    />
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-200 py-2 z-50">
+                      <button
+                        onClick={() => {
+                          setLanguage('tr');
+                          setShowLanguageMenu(false);
+                        }}
+                        className={`w-full px-4 py-2 text-left text-sm font-medium transition flex items-center gap-2 ${
+                          language === 'tr' 
+                            ? 'bg-emerald-50 text-emerald-700' 
+                            : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        🇹🇷 Türkçe
+                      </button>
+                      <button
+                        onClick={() => {
+                          setLanguage('en');
+                          setShowLanguageMenu(false);
+                        }}
+                        className={`w-full px-4 py-2 text-left text-sm font-medium transition flex items-center gap-2 ${
+                          language === 'en' 
+                            ? 'bg-emerald-50 text-emerald-700' 
+                            : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        🇬🇧 English
+                      </button>
+                      <button
+                        onClick={() => {
+                          setLanguage('de');
+                          setShowLanguageMenu(false);
+                        }}
+                        className={`w-full px-4 py-2 text-left text-sm font-medium transition flex items-center gap-2 ${
+                          language === 'de' 
+                            ? 'bg-emerald-50 text-emerald-700' 
+                            : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        🇩🇪 Deutsch
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+
               {/* User Avatar & Menu */}
               <div className="relative">
                 <button
@@ -159,7 +224,7 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   {currentUser.avatarUrl ? (
                     <img 
-                      src={currentUser.avatarUrl.startsWith('http') ? currentUser.avatarUrl : `http://127.0.0.1:5001${currentUser.avatarUrl}`}
+                      src={currentUser.avatarUrl.startsWith('data:') || currentUser.avatarUrl.startsWith('http') ? currentUser.avatarUrl : `http://127.0.0.1:5001${currentUser.avatarUrl}`}
                       alt={currentUser.fullName} 
                       className="h-8 w-8 rounded-lg object-cover"
                     />
@@ -177,10 +242,10 @@ export const Header: React.FC<HeaderProps> = ({
                       className="fixed inset-0 z-40" 
                       onClick={() => setShowUserMenu(false)}
                     />
-                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-lg border border-slate-200 py-2 z-50">
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-200 py-2 z-50">
                       <div className="px-4 py-3 border-b border-slate-100">
-                        <p className="font-semibold text-slate-900">{currentUser.fullName}</p>
-                        <p className="text-xs text-slate-500">{currentUser.email}</p>
+                        <p className="font-semibold text-slate-900 truncate">{currentUser.fullName}</p>
+                        <p className="text-xs text-slate-500 truncate">{currentUser.email}</p>
                       </div>
                       
                       <button
@@ -191,7 +256,7 @@ export const Header: React.FC<HeaderProps> = ({
                         className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition flex items-center gap-2"
                       >
                         <LogOut className="h-4 w-4" />
-                        Çıkış Yap
+                        {t('header.logout')}
                       </button>
                     </div>
                   </>
@@ -200,17 +265,78 @@ export const Header: React.FC<HeaderProps> = ({
             </>
           ) : (
             <div className="flex items-center space-x-2">
+              {/* Dil Seçici Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowLanguageMenu(!showLanguageMenu)}
+                  className="flex items-center gap-2 p-2 hover:bg-slate-50 rounded-lg transition text-slate-600 hover:text-emerald-600"
+                >
+                  <Globe className="h-5 w-5" />
+                  <span className="text-sm font-medium">{language.toUpperCase()}</span>
+                </button>
+
+                {/* Language Dropdown Menu */}
+                {showLanguageMenu && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setShowLanguageMenu(false)}
+                    />
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-200 py-2 z-50">
+                      <button
+                        onClick={() => {
+                          setLanguage('tr');
+                          setShowLanguageMenu(false);
+                        }}
+                        className={`w-full px-4 py-2 text-left text-sm font-medium transition flex items-center gap-2 ${
+                          language === 'tr' 
+                            ? 'bg-emerald-50 text-emerald-700' 
+                            : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        🇹🇷 Türkçe
+                      </button>
+                      <button
+                        onClick={() => {
+                          setLanguage('en');
+                          setShowLanguageMenu(false);
+                        }}
+                        className={`w-full px-4 py-2 text-left text-sm font-medium transition flex items-center gap-2 ${
+                          language === 'en' 
+                            ? 'bg-emerald-50 text-emerald-700' 
+                            : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        🇬🇧 English
+                      </button>
+                      <button
+                        onClick={() => {
+                          setLanguage('de');
+                          setShowLanguageMenu(false);
+                        }}
+                        className={`w-full px-4 py-2 text-left text-sm font-medium transition flex items-center gap-2 ${
+                          language === 'de' 
+                            ? 'bg-emerald-50 text-emerald-700' 
+                            : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        🇩🇪 Deutsch
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
               <button
                 onClick={() => onOpenAuth('candidate')}
-                className="text-sm font-medium text-slate-600 hover:text-emerald-600 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition"
+                className="hidden sm:inline text-sm font-medium text-slate-600 hover:text-emerald-600 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition"
               >
-                Giriş Yap
+                {t('header.login')}
               </button>
               <button
                 onClick={() => onOpenAuth('employer')}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-4 py-1.5 rounded-lg shadow-sm transition"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-3 sm:px-4 py-1.5 rounded-lg shadow-sm transition"
               >
-                İlan Yayınla
+                {t('header.postJob')}
               </button>
             </div>
           )}
