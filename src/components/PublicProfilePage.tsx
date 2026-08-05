@@ -896,7 +896,15 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
                               key={person.id}
                               user={person}
                               currentUser={currentUser}
-                              onViewProfile={() => onNavigateToProfile && onNavigateToProfile(person.id)}
+                              onViewProfile={() => {
+                                console.log('[DEBUG] onViewProfile called for person:', person.id);
+                                if (onNavigateToProfile) {
+                                  console.log('[DEBUG] Calling onNavigateToProfile with:', person.id);
+                                  onNavigateToProfile(person.id);
+                                } else {
+                                  console.log('[DEBUG] onNavigateToProfile is undefined!');
+                                }
+                              }}
                               onConnect={() => handleSendConnectionRequest(person.id)}
                             />
                           ))}
@@ -922,7 +930,15 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
                               key={person.id}
                               user={person}
                               currentUser={currentUser}
-                              onViewProfile={() => onNavigateToProfile && onNavigateToProfile(person.id)}
+                              onViewProfile={() => {
+                                console.log('[DEBUG] onViewProfile called for person:', person.id);
+                                if (onNavigateToProfile) {
+                                  console.log('[DEBUG] Calling onNavigateToProfile with:', person.id);
+                                  onNavigateToProfile(person.id);
+                                } else {
+                                  console.log('[DEBUG] onNavigateToProfile is undefined!');
+                                }
+                              }}
                               onConnect={() => handleSendConnectionRequest(person.id)}
                             />
                           ))}
@@ -948,7 +964,15 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
                               key={person.id}
                               user={person}
                               currentUser={currentUser}
-                              onViewProfile={() => onNavigateToProfile && onNavigateToProfile(person.id)}
+                              onViewProfile={() => {
+                                console.log('[DEBUG] onViewProfile called for person:', person.id);
+                                if (onNavigateToProfile) {
+                                  console.log('[DEBUG] Calling onNavigateToProfile with:', person.id);
+                                  onNavigateToProfile(person.id);
+                                } else {
+                                  console.log('[DEBUG] onNavigateToProfile is undefined!');
+                                }
+                              }}
                               onConnect={() => handleSendConnectionRequest(person.id)}
                             />
                           ))}
@@ -1316,7 +1340,7 @@ const UserConnectionCard: React.FC<UserConnectionCardProps> = ({
     e.preventDefault();
     e.stopPropagation();
     console.log('[DEBUG] View profile clicked for:', user.fullName, user.id);
-    console.log('[DEBUG] onNavigateToProfile function:', onViewProfile);
+    console.log('[DEBUG] Calling onViewProfile...');
     onViewProfile();
   };
 
