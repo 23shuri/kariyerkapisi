@@ -2292,13 +2292,8 @@ def calculate_connection_score(current_user, current_extended, target_user, targ
     score = 0
     reasons = []
     
-    print(f"[DEBUG] Calculating score for {target_user.full_name}")
-    print(f"[DEBUG] Current user extended: {current_extended}")
-    print(f"[DEBUG] Target user extended: {target_extended}")
-    
     # Mutual friends
     mutual_count = get_mutual_friends_count(current_user_id, target_user.id)
-    print(f"[DEBUG] Mutual friends: {mutual_count}")
     if mutual_count > 0:
         mutual_score = min(mutual_count * 5, 40)
         score += mutual_score
@@ -2306,7 +2301,6 @@ def calculate_connection_score(current_user, current_extended, target_user, targ
     
     # Company & Department matching
     if current_extended and target_extended:
-        print(f"[DEBUG] Current company: {current_extended.company}, Target company: {target_extended.company}")
         if current_extended.company and target_extended.company:
             if current_extended.company.lower().strip() == target_extended.company.lower().strip():
                 if current_extended.department and target_extended.department:
@@ -2339,8 +2333,6 @@ def calculate_connection_score(current_user, current_extended, target_user, targ
             if current_extended.sector.lower().strip() == target_extended.sector.lower().strip():
                 score += 15
                 reasons.append(f"Aynı sektör ({current_extended.sector})")
-    else:
-        print(f"[DEBUG] Missing extended profiles - current: {bool(current_extended)}, target: {bool(target_extended)}")
     
     # Location + Similar field
     if current_user.location and target_user.location:
@@ -2375,8 +2367,6 @@ def calculate_connection_score(current_user, current_extended, target_user, targ
             reasons.append(f"{target_user.location} konumunda")
         if target_user.title:
             reasons.append(f"{target_user.title} pozisyonunda")
-    
-    print(f"[DEBUG] Final score: {score}, reasons: {reasons}")
     
     return {
         'score': score,

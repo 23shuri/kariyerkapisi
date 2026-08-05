@@ -45,14 +45,11 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
   useEffect(() => {
-    console.log('[DEBUG] useEffect called - userId:', userId, 'activeTab:', activeTab);
     fetchUserProfile();
     incrementViewCount();
     if (activeTab === 'friends') {
-      console.log('[DEBUG] Loading friends for userId:', userId);
       fetchFriends();
     } else if (activeTab === 'connections' && currentUser) {
-      console.log('[DEBUG] Loading suggestions for currentUser:', currentUser.id);
       fetchSuggestions();
     }
   }, [userId, activeTab]);
@@ -78,7 +75,6 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
     try {
       const res = await fetch(`/api/connections/suggestions/${currentUser.id}`);
       const data = await res.json();
-      console.log('[DEBUG] Suggestions data:', data);
       if (res.ok) {
         setSuggestions({
           highProbability: data.highProbability || [],
@@ -1344,13 +1340,6 @@ const UserConnectionCard: React.FC<UserConnectionCardProps> = ({
     onViewProfile();
   };
 
-  console.log('[DEBUG] UserConnectionCard render:', {
-    name: user.fullName,
-    hasReasons: !!user.connectionReason,
-    reasonsCount: user.connectionReason?.length || 0,
-    reasons: user.connectionReason
-  });
-
   return (
     <div className="group bg-gradient-to-br from-slate-50 to-white border border-slate-200 rounded-xl p-5 hover:shadow-lg hover:border-blue-300 transition">
       <div className="flex items-start gap-4 mb-4">
@@ -1392,7 +1381,7 @@ const UserConnectionCard: React.FC<UserConnectionCardProps> = ({
       </div>
 
       {/* Connection Reasons */}
-      {user.connectionReason && user.connectionReason.length > 0 ? (
+      {user.connectionReason && user.connectionReason.length > 0 && (
         <div className="mb-4 pb-4 border-b border-slate-100">
           <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Neden Önerildi</p>
           <div className="space-y-1.5">
@@ -1403,10 +1392,6 @@ const UserConnectionCard: React.FC<UserConnectionCardProps> = ({
               </p>
             ))}
           </div>
-        </div>
-      ) : (
-        <div className="mb-4 pb-4 border-b border-slate-100">
-          <p className="text-xs text-slate-400 italic">Öneri bilgisi yok</p>
         </div>
       )}
 
