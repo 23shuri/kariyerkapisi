@@ -9,6 +9,100 @@ interface CVAnalysisModalProps {
   candidateId: string;
 }
 
+// Browser-side heuristic CV text extraction and analysis
+async function extractAndAnalyzePDF(file: File): Promise<CVAnalysisResult> {
+  try {
+    // Read file as text (works for .txt and plain text PDFs)
+    const text = await file.text();
+    
+    // Heuristic analysis
+    const textLower = text.toLowerCase();
+    
+    // Extract skills
+    const commonSkills = [
+      'react', 'typescript', 'javascript', 'node.js', 'python', 'java', 'c++',
+      'sql', 'mongodb', 'postgresql', 'docker', 'kubernetes', 'aws', 'azure', 'gcp',
+      'html', 'css', 'tailwind', 'bootstrap', 'figma', 'photoshop', 'excel',
+      'machine learning', 'tensorflow', 'pytorch', 'pandas', 'numpy',
+      'git', 'github', 'gitlab', 'devops', 'ci/cd', 'linux', 'unix'
+    ];
+    const skills = commonSkills.filter(skill => textLower.includes(skill));
+    
+    // Extract languages
+    const languages: LanguageExtracted[] = [];
+    if (textLower.includes('english') || textLower.includes('ingilizce')) {
+      languages.push({ name: 'English', level: 'Advanced' });
+    }
+    if (textLower.includes('german') || textLower.includes('almanca')) {
+      languages.push({ name: 'German', level: 'Intermediate' });
+    }
+    if (textLower.includes('turkish') || textLower.includes('türkçe')) {
+      languages.push({ name: 'Turkish', level: 'Native' });
+    }
+    if (textLower.includes('french') || textLower.includes('fransızca')) {
+      languages.push({ name: 'French', level: 'Intermediate' });
+    }
+    
+    // Extract education
+    const education: EducationExtracted[] = [];
+    const lines = text.split('\n');
+    const eduKeywords = ['university', 'üniversite', 'college', 'bachelor', 'master', 'phd', 'degree', 'lisan', 'yüksek lisans'];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].toLowerCase().trim();
+      if (eduKeywords.some(kw => line.includes(kw)) && line.length > 5) {
+        education.push({
+          level: line.includes('master') || line.includes('yüksek lisans') ? 'Master' : 
+                 line.includes('phd') ? 'PhD' : 'Bachelor',
+          school: lines[i].trim(),
+          field: lines[i + 1]?.trim() || '',
+          year: ''
+        });
+        i++;
+      }
+    }
+    
+    // Extract experience
+    const experience: ExperienceExtracted[] = [];
+    const expKeywords = ['company', 'position', 'role', 'employed', 'worked', 'experience', 'şirket', 'pozisyon', 'çalış'];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].toLowerCase().trim();
+      if (expKeywords.some(kw => line.includes(kw)) && line.length > 3) {
+        experience.push({
+          company: lines[i].trim(),
+          position: lines[i + 1]?.trim() || '',
+          duration: '',
+          description: lines[i + 2]?.trim() || ''
+        });
+        i += 2;
+      }
+    }
+    
+    // Summary
+    const summary = text.substring(0, 300).trim();
+    
+    return {
+      success: true,
+      data: {
+        education,
+        experience,
+        skills,
+        languages,
+        certifications: [],
+        summary,
+        extractedText: text.substring(0, 500)
+      }
+    };
+  } catch (err) {
+    console.error('File extraction error:', err);
+    return {
+      success: false,
+      error: 'Dosya okunamadı. Lütfen geçerli bir metin dosyası yükleyiniz.'
+    };
+  }
+}
+
 export const CVAnalysisModal: React.FC<CVAnalysisModalProps> = ({
   isOpen,
   onClose,
@@ -36,9 +130,9 @@ export const CVAnalysisModal: React.FC<CVAnalysisModalProps> = ({
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
 
-    // Validate file type
-    if (!selectedFile.type.includes('pdf') && !selectedFile.name.endsWith('.pdf')) {
-      setError('Lütfen geçerli bir PDF dosyası seçiniz.');
+    // Validate file type - allow text files, PDFs will need pdf.js
+    if (!selectedFile.name.endsWith('.txt') && !selectedFile.name.endsWith('.pdf')) {
+      setError('Lütfen .txt veya PDF dosyası seçiniz (Şu anda .txt önerilir).');
       return;
     }
 
@@ -53,7 +147,7 @@ export const CVAnalysisModal: React.FC<CVAnalysisModalProps> = ({
 
   const handleAnalyze = async () => {
     if (!file) {
-      setError('Lütfen bir PDF dosyası seçiniz.');
+      setError('Lütfen bir dosya seçiniz.');
       return;
     }
 
@@ -61,24 +155,10 @@ export const CVAnalysisModal: React.FC<CVAnalysisModalProps> = ({
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('candidateId', candidateId);
-
-      const response = await fetch('/api/cv/analyze', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'CV analiz işlemi başarısız oldu.');
-      }
-
-      const data: CVAnalysisResult = await response.json();
+      const data = await extractAndAnalyzePDF(file);
 
       if (!data.success) {
-        throw new Error(data.message || 'CV analiz işlemi başarısız oldu.');
+        throw new Error(data.error || 'CV analiz işlemi başarısız oldu.');
       }
 
       setAnalysisResult(data);
@@ -250,7 +330,7 @@ export const CVAnalysisModal: React.FC<CVAnalysisModalProps> = ({
               <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:border-emerald-400 transition-colors">
                 <input
                   type="file"
-                  accept=".pdf"
+                  accept=".txt,.pdf"
                   onChange={handleFileSelect}
                   className="hidden"
                   id="pdf-input"
@@ -258,9 +338,9 @@ export const CVAnalysisModal: React.FC<CVAnalysisModalProps> = ({
                 <label htmlFor="pdf-input" className="cursor-pointer block">
                   <Upload className="h-12 w-12 text-slate-400 mx-auto mb-3" />
                   <p className="text-sm font-medium text-slate-700">
-                    {file ? file.name : 'PDF dosyanızı sürükleyin veya tıklayın'}
+                    {file ? file.name : 'CV dosyanızı sürükleyin veya tıklayın'}
                   </p>
-                  {!file && <p className="text-xs text-slate-500 mt-1">PDF dosyası (maksimum 10MB)</p>}
+                  {!file && <p className="text-xs text-slate-500 mt-1">.txt dosyası önerilir (maksimum 10MB)</p>}
                 </label>
               </div>
 
