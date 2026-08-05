@@ -43,9 +43,9 @@ export const JobListPage: React.FC<JobListPageProps> = ({ currentUser, onViewDet
     fetchJobs();
   }, [currentUser]);
 
-  // Eşleşme puanı hesapla
+  // Eşleşme puanı hesapla (sadece candidate'lar için)
   const calculateMatchScore = (job: Job, user: User | null): number => {
-    if (!user || !user.skills || user.skills.length === 0) {
+    if (!user || user.role !== 'candidate' || !user.skills || user.skills.length === 0) {
       return Math.floor(Math.random() * 40) + 50; // 50-90 arası random
     }
 
