@@ -44,6 +44,11 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
   }>({ highProbability: [], sameSector: [], discover: [] });
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
+  // Scroll to top when userId changes (profile navigation)
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [userId]);
+
   useEffect(() => {
     fetchUserProfile();
     incrementViewCount();
