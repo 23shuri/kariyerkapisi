@@ -105,7 +105,8 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({
     } catch (err) {
       console.error('CV publish error:', err);
       setIsPublishingCV(false);
-      alert('❌ CV yayınlanırken hata oluştu. Lütfen tekrar deneyin.\n\nHata: ' + (err instanceof Error ? err.message : String(err)));
+      const errorMsg = err instanceof Error ? err.message : (err ? String(err) : 'Bilinmeyen hata');
+      alert('❌ CV yayınlanırken hata oluştu. Lütfen tekrar deneyin.\n\nHata: ' + errorMsg);
     }
   };
 
