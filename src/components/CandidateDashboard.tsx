@@ -54,33 +54,49 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({
   }, [currentUser.id]);
 
   const handlePublishCV = () => {
-    if (!cvTitle.trim()) { alert('Pozisyon başlığı zorunludur.'); return; }
-    setIsPublishingCV(true);
-    const skillsArray = cvSkills.split(',').map(s => s.trim()).filter(Boolean);
-    const newCV: CandidateCV = {
-      id: myCV?.id || `cv_${currentUser.id}`,
-      candidateId: currentUser.id,
-      candidateName: currentUser.fullName,
-      candidateAvatarUrl: currentUser.avatarUrl,
-      title: cvTitle,
-      location: cvLocation,
-      workPreference: cvWorkPref,
-      skills: skillsArray,
-      experienceYears: Number(cvExpYears) || 0,
-      experienceLevel: cvExpLevel,
-      salaryExpectation: cvSalary,
-      summary: cvSummary,
-      publishedAt: new Date().toLocaleDateString('tr-TR'),
-      isActive: true,
-    };
-    const savedCVs = JSON.parse(localStorage.getItem('kariyer_kapisi_cvs') || '[]');
-    const filtered = savedCVs.filter((cv: CandidateCV) => cv.candidateId !== currentUser.id);
-    filtered.push(newCV);
-    localStorage.setItem('kariyer_kapisi_cvs', JSON.stringify(filtered));
-    setMyCV(newCV);
-    setShowCVForm(false);
-    setIsPublishingCV(false);
-    alert('✅ CV profiliniz başarıyla yayınlandı!');
+    if (!cvTitle.trim()) { 
+      alert('Pozisyon başlığı zorunludur.'); 
+      return; 
+    }
+    
+    try {
+      setIsPublishingCV(true);
+      const skillsArray = cvSkills.split(',').map(s => s.trim()).filter(Boolean);
+      const newCV: CandidateCV = {
+        id: myCV?.id || `cv_${currentUser.id}`,
+        candidateId: currentUser.id,
+        candidateName: currentUser.fullName,
+        candidateAvatarUrl: currentUser.avatarUrl,
+        title: cvTitle,
+        location: cvLocation,
+        workPreference: cvWorkPref,
+        skills: skillsArray,
+        experienceYears: Number(cvExpYears) || 0,
+        experienceLevel: cvExpLevel,
+        salaryExpectation: cvSalary,
+        summary: cvSummary,
+        publishedAt: new Date().toLocaleDateString('tr-TR'),
+        isActive: true,
+      };
+      
+      const savedCVs = JSON.parse(localStorage.getItem('kariyer_kapisi_cvs') || '[]');
+      const filtered = savedCVs.filter((cv: CandidateCV) => cv.candidateId !== currentUser.id);
+      filtered.push(newCV);
+      localStorage.setItem('kariyer_kapisi_cvs', JSON.stringify(filtered));
+      
+      setMyCV(newCV);
+      setShowCVForm(false);
+      
+      // setTimeout ile UI update'inin bitmesini bekle
+      setTimeout(() => {
+        setIsPublishingCV(false);
+        alert('✅ CV profiliniz başarıyla yayınlandı!');
+      }, 100);
+    } catch (err) {
+      console.error('CV publish error:', err);
+      setIsPublishingCV(false);
+      alert('❌ CV yayınlanırken hata oluştu. Lütfen tekrar deneyin.');
+    }
   };
 
   const handleUnpublishCV = () => {
