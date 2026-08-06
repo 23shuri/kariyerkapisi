@@ -161,19 +161,20 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
     if (!file) return;
     setPhotoUploadError(null);
     
-    // Dosyayı base64'e dönüştür ve localStorage'a kaydet
+    // Dosyayı base64'e dönüştür (preview için)
     const reader = new FileReader();
     reader.onloadend = () => {
       const photoBase64 = reader.result as string;
       
-      // Local state güncelle
+      // Local state güncelle (preview için)
       setUser(prev => prev ? { ...prev, avatarUrl: photoBase64 } : prev);
       
-      // Parent component'e bildir ve localStorage'ı güncelle
+      // localStorage'a kaydet — ama base64 yerine flagı tut
       if (onProfileUpdated && currentUser && currentUser.id === userId) {
         const updatedUser = { ...currentUser, avatarUrl: photoBase64 };
         onProfileUpdated(updatedUser);
-        localStorage.setItem('kariyer_kapisi_session', JSON.stringify(updatedUser));
+        // sessionStorage kullan — geçici, localStorage'a az yer
+        sessionStorage.setItem(`avatar_${currentUser.id}`, photoBase64);
       }
       
       setShowPhotoUpload(false);

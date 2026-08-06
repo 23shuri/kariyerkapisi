@@ -192,8 +192,14 @@ export const EmployerDashboard: React.FC<EmployerDashboardProps> = ({ currentUse
         companyValues: editingCompanyValues.split(',').map(s => s.trim()).filter(Boolean),
       };
 
-      // localStorage'a kaydet
-      localStorage.setItem('kariyer_kapisi_session', JSON.stringify(updatedUser));
+      // localStorage'a kaydet — avatar base64'leri çıkar
+      const userWithoutAvatarBase64 = { ...updatedUser, avatarUrl: undefined };
+      localStorage.setItem('kariyer_kapisi_session', JSON.stringify(userWithoutAvatarBase64));
+      
+      // Avatar base64'i sessionStorage'a kaydet (geçici)
+      if (avatarUrl && avatarUrl.startsWith('data:')) {
+        sessionStorage.setItem(`avatar_${currentUser.id}`, avatarUrl);
+      }
       
       setShowProfileModal(false);
       alert('✅ Şirket profili başarıyla kaydedildi!');

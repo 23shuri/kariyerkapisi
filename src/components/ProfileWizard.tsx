@@ -80,14 +80,13 @@ export const ProfileWizard: React.FC<ProfileWizardProps> = ({ currentUser, onCom
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Dosyayı base64'e dönüştür ve localStorage'a kaydet
+    // Dosyayı base64'e dönüştür (preview için)
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64Avatar = reader.result as string;
       setProfileData(prev => ({ ...prev, avatarUrl: base64Avatar }));
-      // localStorage'a kaydet
-      const updated = { ...profileData, avatarUrl: base64Avatar };
-      localStorage.setItem('kariyer_kapisi_user', JSON.stringify(updated));
+      // sessionStorage'a kaydet (geçici, localStorage'a az yer)
+      sessionStorage.setItem('avatar_temp', base64Avatar);
     };
     reader.readAsDataURL(file);
   };
