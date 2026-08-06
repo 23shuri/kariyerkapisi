@@ -30,7 +30,6 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
   const [activeTab, setActiveTab] = useState<'overview' | 'experience' | 'education' | 'projects' | 'certificates' | 'languages' | 'friends' | 'connections'>('overview');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPhotoUpload, setShowPhotoUpload] = useState(false);
-  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -158,46 +157,28 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
     }
   };
 
-  const handlePhotoUpload = async (file: File) => {
+  const handlePhotoUpload = (file: File) => {
     if (!file) return;
-    setIsUploadingPhoto(true);
     setPhotoUploadError(null);
-    try {
-      // Dosyayı base64'e çevir
-      const photoBase64 = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(file);
-      });
-
-      const res = await fetch('/api/user/upload-photo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, photoBase64 })
-      });
-      const data = await res.json();
-      if (res.ok && data.avatarUrl) {
-        // Local state güncelle
-        setUser(prev => prev ? { ...prev, avatarUrl: data.avatarUrl } : prev);
-        
-        // Parent component'e bildir (Header avatar güncellensin)
-        if (onProfileUpdated && currentUser && currentUser.id === userId) {
-          const updatedUser = { ...currentUser, avatarUrl: data.avatarUrl };
-          onProfileUpdated(updatedUser);
-          // localStorage'ı da güncelle
-          localStorage.setItem('kariyer_kapisi_session', JSON.stringify(updatedUser));
-        }
-        
-        setShowPhotoUpload(false);
-      } else {
-        setPhotoUploadError(data.error || 'Fotoğraf yüklenirken hata oluştu.');
+    
+    // Dosyayı base64'e dönüştür ve localStorage'a kaydet
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const photoBase64 = reader.result as string;
+      
+      // Local state güncelle
+      setUser(prev => prev ? { ...prev, avatarUrl: photoBase64 } : prev);
+      
+      // Parent component'e bildir ve localStorage'ı güncelle
+      if (onProfileUpdated && currentUser && currentUser.id === userId) {
+        const updatedUser = { ...currentUser, avatarUrl: photoBase64 };
+        onProfileUpdated(updatedUser);
+        localStorage.setItem('kariyer_kapisi_session', JSON.stringify(updatedUser));
       }
-    } catch (err) {
-      console.error('Photo upload error:', err);
-      setPhotoUploadError('Bağlantı hatası. Lütfen tekrar deneyin.');
-    } finally {
-      setIsUploadingPhoto(false);
-    }
+      
+      setShowPhotoUpload(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleShareProfile = () => {
