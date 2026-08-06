@@ -1177,13 +1177,6 @@ export const PublicProfilePage: React.FC<PublicProfilePageProps> = ({
             </div>
           )}
 
-          {isUploadingPhoto && (
-            <div className="mt-4 flex items-center justify-center gap-3 text-blue-600">
-              <Loader2 className="h-5 w-5 animate-spin" />
-              <span className="text-sm font-medium">Fotoğraf yükleniyor...</span>
-            </div>
-          )}
-
           <button
             onClick={() => { setShowPhotoUpload(false); setPhotoUploadError(null); }}
             className="mt-5 w-full py-2.5 border border-slate-300 text-slate-600 hover:bg-slate-50 rounded-xl transition font-medium text-sm"
