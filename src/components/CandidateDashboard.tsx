@@ -33,6 +33,7 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({
   const [cvSalary, setCvSalary] = useState(currentUser.salaryExpectation || '');
   const [cvSummary, setCvSummary] = useState(currentUser.bio || '');
   const [isPublishingCV, setIsPublishingCV] = useState(false);
+  const [showCVUploadAnalysisModal, setShowCVUploadAnalysisModal] = useState(false);
 
   useEffect(() => {
     // Mock ilanları + localStorage'dan yayınlanan ilanları yükle
@@ -95,7 +96,25 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({
   const handleCVAnalysisComplete = (result: CVAnalysisResult) => {
     if (!result.success || !result.data) return;
 
-    // Çıkarılan bilgileri profile yükle
+    // Eğer form'dan çağrılmışsa, form alanlarını doldur
+    if (showCVUploadAnalysisModal) {
+      // Form alanlarını çıkarılan bilgilerle güncelle
+      if (result.data.skills && result.data.skills.length > 0) {
+        setCvSkills(result.data.skills.join(', '));
+      }
+      if (result.data.summary) {
+        setCvSummary(result.data.summary);
+      }
+      // Title'ı analiz sonuçlarından al (varsa)
+      if (result.data.jobTitles && result.data.jobTitles.length > 0) {
+        setCvTitle(result.data.jobTitles[0]);
+      }
+      setShowCVUploadAnalysisModal(false);
+      alert('✅ PDF analiz edildi! Form alanları otomatik dolduruldu.');
+      return;
+    }
+
+    // Yoksa profile'ı güncelle (eski davranış)
     const updatedUser: UserType = {
       ...currentUser,
       skills: result.data.skills || currentUser.skills,
@@ -232,6 +251,27 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({
               {/* CV Formu */}
               {showCVForm && (
                 <div className="mt-4 border-t border-slate-100 pt-4 space-y-4">
+                  {/* PDF Upload Bölümü */}
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                        <Upload className="h-4 w-4 text-purple-600" />
+                        PDF'den Otomatik Doldur (İsteğe Bağlı)
+                      </label>
+                    </div>
+                    <p className="text-xs text-slate-600 mb-2">
+                      PDF CV'nizi yükleyin — beceriler, özet ve diğer bilgiler otomatik olarak doldurulacak
+                    </p>
+                    <button
+                      onClick={() => setShowCVUploadAnalysisModal(true)}
+                      type="button"
+                      className="w-full py-2 px-3 border-2 border-dashed border-purple-300 rounded-lg text-sm font-medium text-purple-700 hover:bg-purple-50 transition flex items-center justify-center gap-2"
+                    >
+                      <Upload className="h-4 w-4" />
+                      PDF Yükle ve Analiz Et
+                    </button>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold text-slate-600 mb-1">Aradığınız Pozisyon *</label>
@@ -486,8 +526,11 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({
 
       {/* CVAnalysisModal */}
       <CVAnalysisModal
-        isOpen={showCVAnalysisModal}
-        onClose={() => setShowCVAnalysisModal(false)}
+        isOpen={showCVAnalysisModal || showCVUploadAnalysisModal}
+        onClose={() => {
+          setShowCVAnalysisModal(false);
+          setShowCVUploadAnalysisModal(false);
+        }}
         onAnalysisComplete={handleCVAnalysisComplete}
         candidateId={currentUser.id}
       />
