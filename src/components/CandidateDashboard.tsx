@@ -71,7 +71,7 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({
         location: cvLocation,
         workPreference: cvWorkPref,
         skills: skillsArray,
-        experienceYears: Number(cvExpYears) || 0,
+        experienceYears: parseInt(cvExpYears) || 0,
         experienceLevel: cvExpLevel,
         salaryExpectation: cvSalary,
         summary: cvSummary,
@@ -79,7 +79,17 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({
         isActive: true,
       };
       
-      const savedCVs = JSON.parse(localStorage.getItem('kariyer_kapisi_cvs') || '[]');
+      let savedCVs: CandidateCV[] = [];
+      try {
+        const stored = localStorage.getItem('kariyer_kapisi_cvs');
+        if (stored) {
+          savedCVs = JSON.parse(stored);
+        }
+      } catch (parseErr) {
+        console.error('Parse error for CVs:', parseErr);
+        savedCVs = [];
+      }
+      
       const filtered = savedCVs.filter((cv: CandidateCV) => cv.candidateId !== currentUser.id);
       filtered.push(newCV);
       localStorage.setItem('kariyer_kapisi_cvs', JSON.stringify(filtered));
@@ -95,7 +105,7 @@ export const CandidateDashboard: React.FC<CandidateDashboardProps> = ({
     } catch (err) {
       console.error('CV publish error:', err);
       setIsPublishingCV(false);
-      alert('❌ CV yayınlanırken hata oluştu. Lütfen tekrar deneyin.');
+      alert('❌ CV yayınlanırken hata oluştu. Lütfen tekrar deneyin.\n\nHata: ' + (err instanceof Error ? err.message : String(err)));
     }
   };
 
