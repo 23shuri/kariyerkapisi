@@ -1,0 +1,109 @@
+﻿{
+  "common": {
+    "appName": "KariyerKapısı",
+    "tagline": "YAPAY ZEKA DESTEKLİ KARİYER",
+    "description": "Yapay Zeka Tabanlı Akıllı Eşleştirme Sistemi",
+    "copyright": "Tüm hakları saklıdır."
+  },
+  "header": {
+    "jobs": "İş İlanları",
+    "home": "Anasayfa",
+    "applications": "Başvurularım",
+    "network": "Network",
+    "profile": "Profilim",
+    "login": "Giriş Yap",
+    "postJob": "İlan Yayınla",
+    "logout": "Çıkış Yap",
+    "notifications": "Bildirimler",
+    "savedJobs": "Kaydedilen İlanlar"
+  },
+  "hero": {
+    "badge": "Kariyer Atlası Akıllı Eşleştirme Motoru V3.0 Aktif",
+    "title": "CV'nizi Yükleyin, Size En Uygun İşi Yapay Zeka Bulsun!",
+    "subtitle": "Klasik anahtar kelime aramalarını unutun. Kariyer Atlası, özgeçmişinizi derinlemesine analiz eder, iş ilanlarıyla yeteneklerinizi %99'a varan doğrulukla eşleştirir.",
+    "scanCv": "Özgeçmişini AI ile Tara",
+    "postJob": "İş İlanı Yayınla",
+    "feature1Title": "Derin AI Analizi",
+    "feature1Desc": "Gemini LLM teknolojisi CV'nizdeki projeleri, deneyimleri ogrenileri ve yeteneklerinizi akıllıca yorumlar.",
+    "feature2Title": "Uyum Raporu",
+    "feature2Desc": "Başvurduğunuz her ilan için güçlü yanlarınızı ve gelişim alanlarınızı gösteren anlık raporlar.",
+    "feature3Title": "Kolay Başvuru",
+    "feature3Desc": "Tek tıkla akıllı başvuru yapın, işe alım yöneticilerine en üst sıralarda eşleşmeyle ulaşın."
+  },
+  "auth": {
+    "loginTitle": "Giriş Yap",
+    "signupTitle": "Kayıt Ol",
+    "email": "E-posta",
+    "password": "Şifre",
+    "fullName": "Ad Soyad",
+    "phone": "Telefon",
+    "companyName": "Şirket Adı",
+    "companySector": "Sektör",
+    "companySize": "Şirket Boyutu",
+    "login": "Giriş Yap",
+    "signup": "Kayıt Ol",
+    "switchToLogin": "Zaten hesabın var mı? Giriş yap",
+    "switchToSignup": "Hesabın yok mu? Kayıt ol",
+    "or": "veya",
+    "candidate": "Aday Olarak Gir",
+    "employer": "İşveren Olarak Gir",
+    "invalidEmail": "Geçersiz e-posta",
+    "passwordTooShort": "Şifre en az 6 karakter olmalı",
+    "success": "Başarılı!",
+    "loginSubtitle": "İş Arayan & Aday Girişi",
+    "signupSubtitle": "İş Veren & Şirket Girişi",
+    "candidateTab": "İş Arayan",
+    "employerTab": "İş Veren",
+    "emailLabel": "E-Posta Adresi",
+    "fullNameLabel": "Ad Soyad",
+    "noAccount": "Henüz hesabınız yok mu?",
+    "alreadyMember": "Zaten üye misiniz?",
+    "createAccount": "Yeni hesap açın",
+    "emailPlaceholder": "isim@sirket.com",
+    "passwordPlaceholder": "••••••••",
+    "genericError": "Bir hata oluştu. Lütfen tekrar deneyin."
+  },
+  "jobList": {
+    "search": "İş ara...",
+    "noJobs": "İş ilanı bulunamadı",
+    "filter": "Filtrele",
+    "matchScore": "Eşleşme Oranı",
+    "apply": "Başvur",
+    "applyAndMatch": "Başvur & Eşleştir"
+  },
+  "jobDetail": {
+    "apply": "Başvur",
+    "save": "Kaydet",
+    "saved": "Kaydedildi",
+    "description": "İş Açıklaması",
+    "requirements": "Gereksinimler",
+    "company": "Şirket",
+    "location": "Konum",
+    "salary": "Maaş",
+    "type": "İş Türü",
+    "postedDate": "Yayın Tarihi"
+  },
+  "notifications": {
+    "title": "Bildirimler",
+    "noNotifications": "Henüz bildirim yok",
+    "markAllAsRead": "Tümünü Okundu İşaretle"
+  },
+  "button": {
+    "back": "Geri",
+    "close": "Kapat",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "delete": "Sil",
+    "ok": "Tamam"
+  },
+  "loading": {
+    "default": "Yükleniyor..."
+  },
+  "error": {
+    "generic": "Hata",
+    "serverError": "Sunucu hatası oluştu."
+  },
+  "message": {
+    "success": "Başarılı"
+  }
+}
