@@ -1,0 +1,109 @@
+{
+  "common": {
+    "appName": "KariyerKapısı",
+    "tagline": "AI-POWERED CAREER",
+    "description": "Artificial Intelligence Based Smart Matching System",
+    "copyright": "All rights reserved."
+  },
+  "header": {
+    "jobs": "Job Listings",
+    "home": "Home",
+    "applications": "My Applications",
+    "network": "Network",
+    "profile": "My Profile",
+    "login": "Login",
+    "postJob": "Post a Job",
+    "logout": "Logout",
+    "notifications": "Notifications",
+    "savedJobs": "Saved Jobs"
+  },
+  "hero": {
+    "badge": "KariyerKapısı Smart Matching Engine V3.0 Active",
+    "title": "Upload Your CV, Let AI Find Your Perfect Job!",
+    "subtitle": "Forget traditional keyword searches. KariyerKapısı deeply analyzes your resume and matches your skills with job listings with up to 99% accuracy.",
+    "scanCv": "Scan CV with AI",
+    "postJob": "Post a Job",
+    "feature1Title": "Deep AI Analysis",
+    "feature1Desc": "Gemini LLM technology intelligently interprets the projects, experiences, and skills in your CV.",
+    "feature2Title": "Match Report",
+    "feature2Desc": "Get instant reports for each job application showing your strengths and areas for development.",
+    "feature3Title": "Easy Application",
+    "feature3Desc": "Apply with one click and reach hiring managers at the top with a perfect match."
+  },
+  "auth": {
+    "loginTitle": "Login",
+    "signupTitle": "Sign Up",
+    "email": "Email",
+    "password": "Password",
+    "fullName": "Full Name",
+    "phone": "Phone",
+    "companyName": "Company Name",
+    "companySector": "Sector",
+    "companySize": "Company Size",
+    "login": "Login",
+    "signup": "Sign Up",
+    "switchToLogin": "Already have an account? Login",
+    "switchToSignup": "Don't have an account? Sign Up",
+    "or": "or",
+    "candidate": "Login as Candidate",
+    "employer": "Login as Employer",
+    "invalidEmail": "Invalid email",
+    "passwordTooShort": "Password must be at least 6 characters",
+    "success": "Success!",
+    "loginSubtitle": "Job Seeker & Candidate Login",
+    "signupSubtitle": "Employer & Company Login",
+    "candidateTab": "Job Seeker",
+    "employerTab": "Employer",
+    "emailLabel": "Email Address",
+    "fullNameLabel": "Full Name",
+    "noAccount": "Don't have an account yet?",
+    "alreadyMember": "Already a member?",
+    "createAccount": "Create an account",
+    "emailPlaceholder": "name@company.com",
+    "passwordPlaceholder": "••••••••",
+    "genericError": "An error occurred. Please try again."
+  },
+  "jobList": {
+    "search": "Search for jobs...",
+    "noJobs": "No job listings found",
+    "filter": "Filter",
+    "matchScore": "Match Score",
+    "apply": "Apply",
+    "applyAndMatch": "Apply & Match"
+  },
+  "jobDetail": {
+    "apply": "Apply",
+    "save": "Save",
+    "saved": "Saved",
+    "description": "Job Description",
+    "requirements": "Requirements",
+    "company": "Company",
+    "location": "Location",
+    "salary": "Salary",
+    "type": "Job Type",
+    "postedDate": "Posted Date"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "noNotifications": "No notifications yet",
+    "markAllAsRead": "Mark All as Read"
+  },
+  "button": {
+    "back": "Back",
+    "close": "Close",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "ok": "OK"
+  },
+  "loading": {
+    "default": "Loading..."
+  },
+  "error": {
+    "generic": "Error",
+    "serverError": "Server error occurred."
+  },
+  "message": {
+    "success": "Success"
+  }
+}

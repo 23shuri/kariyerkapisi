@@ -1,0 +1,109 @@
+{
+  "common": {
+    "appName": "KariyerKapısı",
+    "tagline": "KI-GESTÜTZTE KARRIERE",
+    "description": "Künstliche Intelligenz basiertes intelligentes Matching-System",
+    "copyright": "Alle Rechte vorbehalten."
+  },
+  "header": {
+    "jobs": "Stellenausschreibungen",
+    "home": "Startseite",
+    "applications": "Meine Bewerbungen",
+    "network": "Netzwerk",
+    "profile": "Mein Profil",
+    "login": "Anmelden",
+    "postJob": "Stelle ausschreiben",
+    "logout": "Abmelden",
+    "notifications": "Benachrichtigungen",
+    "savedJobs": "Gespeicherte Stellen"
+  },
+  "hero": {
+    "badge": "KariyerKapısı Smart Matching Engine V3.0 Aktiv",
+    "title": "Laden Sie Ihren Lebenslauf hoch, lassen Sie AI Ihren perfekten Job finden!",
+    "subtitle": "Vergessen Sie traditionelle Schlüsselwortsuchen. KariyerKapısı analysiert Ihren Lebenslauf tiefergehend und passt Ihre Fähigkeiten mit bis zu 99% Genauigkeit an Stellenausschreibungen an.",
+    "scanCv": "Lebenslauf mit AI scannen",
+    "postJob": "Stelle ausschreiben",
+    "feature1Title": "Tiefe KI-Analyse",
+    "feature1Desc": "Die Gemini LLM-Technologie interpretiert intelligent die Projekte, Erfahrungen und Fähigkeiten in Ihrem Lebenslauf.",
+    "feature2Title": "Match-Bericht",
+    "feature2Desc": "Erhalten Sie sofort Berichte für jede Bewerbung, die Ihre Stärken und Entwicklungsbereiche anzeigen.",
+    "feature3Title": "Einfache Bewerbung",
+    "feature3Desc": "Bewerben Sie sich mit einem Klick und erreichen Sie Personalverantwortliche ganz oben mit einer perfekten Übereinstimmung."
+  },
+  "auth": {
+    "loginTitle": "Anmelden",
+    "signupTitle": "Registrieren",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "fullName": "Vollständiger Name",
+    "phone": "Telefon",
+    "companyName": "Unternehmensname",
+    "companySector": "Sektor",
+    "companySize": "Unternehmensgröße",
+    "login": "Anmelden",
+    "signup": "Registrieren",
+    "switchToLogin": "Haben Sie bereits ein Konto? Melden Sie sich an",
+    "switchToSignup": "Sie haben kein Konto? Registrieren Sie sich",
+    "or": "oder",
+    "candidate": "Als Kandidat anmelden",
+    "employer": "Als Arbeitgeber anmelden",
+    "invalidEmail": "Ungültige E-Mail",
+    "passwordTooShort": "Das Passwort muss mindestens 6 Zeichen lang sein",
+    "success": "Erfolg!",
+    "loginSubtitle": "Jobsuche & Kandidaten-Login",
+    "signupSubtitle": "Arbeitgeber & Unternehmens-Login",
+    "candidateTab": "Jobsuche",
+    "employerTab": "Arbeitgeber",
+    "emailLabel": "E-Mail-Adresse",
+    "fullNameLabel": "Vollständiger Name",
+    "noAccount": "Haben Sie noch kein Konto?",
+    "alreadyMember": "Sind Sie bereits Mitglied?",
+    "createAccount": "Erstellen Sie ein Konto",
+    "emailPlaceholder": "name@unternehmen.de",
+    "passwordPlaceholder": "••••••••",
+    "genericError": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut."
+  },
+  "jobList": {
+    "search": "Nach Stellen suchen...",
+    "noJobs": "Keine Stellenausschreibungen gefunden",
+    "filter": "Filtern",
+    "matchScore": "Match-Bewertung",
+    "apply": "Bewerben",
+    "applyAndMatch": "Bewerben & Abgleichen"
+  },
+  "jobDetail": {
+    "apply": "Bewerben",
+    "save": "Speichern",
+    "saved": "Gespeichert",
+    "description": "Stellenbeschreibung",
+    "requirements": "Anforderungen",
+    "company": "Unternehmen",
+    "location": "Standort",
+    "salary": "Gehalt",
+    "type": "Stellentyp",
+    "postedDate": "Veröffentlichungsdatum"
+  },
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "noNotifications": "Noch keine Benachrichtigungen",
+    "markAllAsRead": "Alle als gelesen markieren"
+  },
+  "button": {
+    "back": "Zurück",
+    "close": "Schließen",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "ok": "OK"
+  },
+  "loading": {
+    "default": "Wird geladen..."
+  },
+  "error": {
+    "generic": "Fehler",
+    "serverError": "Ein Serverfehler ist aufgetreten."
+  },
+  "message": {
+    "success": "Erfolg"
+  }
+}
